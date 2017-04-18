@@ -17,8 +17,13 @@ var (
 )
 
 func httpInit() {
-	router.GET("/", httpRootHandler)
 	router.ServeFiles("/static/*filepath", options.StaticDirPath)
+	router.GET("/", httpRootHandler)
+	router.GET("/chat/:chat", httpChatHandler)
+	router.GET("/chat/:chat/:year", httpYearHandler)
+	router.GET("/chat/:chat/:year/:month", httpMonthHandler)
+	router.GET("/chat/:chat/:year/:month/:day", httpDayHandler)
+
 }
 
 func httpServe() (err error) {
@@ -48,6 +53,27 @@ func httpInitRequest(ctx *fasthttp.RequestCtx) {
 }
 
 func httpRootHandler(ctx *fasthttp.RequestCtx) {
+	httpInitRequest(ctx)
+	ctx.WriteString("OK")
+	ctx.SetStatusCode(fasthttp.StatusOK)
+}
+
+func httpChatHandler(ctx *fasthttp.RequestCtx) {
+	httpInitRequest(ctx)
+	ctx.WriteString("OK")
+	ctx.SetStatusCode(fasthttp.StatusOK)
+}
+func httpYearHandler(ctx *fasthttp.RequestCtx) {
+	httpInitRequest(ctx)
+	ctx.WriteString("OK")
+	ctx.SetStatusCode(fasthttp.StatusOK)
+}
+func httpMonthHandler(ctx *fasthttp.RequestCtx) {
+	httpInitRequest(ctx)
+	ctx.WriteString("OK")
+	ctx.SetStatusCode(fasthttp.StatusOK)
+}
+func httpDayHandler(ctx *fasthttp.RequestCtx) {
 	httpInitRequest(ctx)
 	ctx.WriteString("OK")
 	ctx.SetStatusCode(fasthttp.StatusOK)
