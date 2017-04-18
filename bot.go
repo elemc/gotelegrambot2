@@ -41,6 +41,9 @@ func botServe() (err error) {
 
 	for update := range updates {
 		log.Debugf("new update: %+v", *update.Message)
+		if update.Message.Command() == "start" {
+			continue
+		}
 		go func() {
 			if err = saveMessage(update.Message); err != nil {
 				log.Errorf("Unable to save message: %s", err)

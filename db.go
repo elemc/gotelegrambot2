@@ -54,3 +54,8 @@ func createTables() (err error) {
 	}
 	return
 }
+
+func getChats() (chats []*tgbotapi.Chat, err error) {
+	err = db.Model(&chats).Select()
+	return
+}

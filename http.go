@@ -7,9 +7,35 @@
 package main
 
 import (
+	"fmt"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/buaazp/fasthttprouter"
 	"github.com/valyala/fasthttp"
+	"gopkg.in/telegram-bot-api.v4"
+)
+
+const (
+	htmlHeader = `<!DOCTYPE html>
+<html>
+<head>
+<style type="text/css">
+body { background-color:#fff; color:#333; font-family:verdana, arial, helvetica, sans-serif; font-size:13px; line-height:18px }
+p,ol,ul,td { font-family: verdana, arial, helvetica, sans-serif;font-size:13px; line-height:18px}
+a { color:#000 }
+a:visited { color:#666 }
+a:hover{ color:#fff; background-color:#000 }
+tr.dir { font-weight: bold }
+td.icon { font-size: 20px; }
+a.icon { font-size: 27px; text-decoration: none; }
+</style>
+<meta charset="UTF-8" />
+<title>Telegram logs</title>
+</head>
+<body>
+<h1><a href="/">Telegram logs</a></h1>`
+	htmlFooter = `</body>
+</html>`
 )
 
 var (
@@ -52,9 +78,37 @@ func httpInitRequest(ctx *fasthttp.RequestCtx) {
 	log.WithFields(fields).Debugf("Request from %s to %s", ctx.RemoteIP().String(), ctx.URI().String())
 }
 
+func httpFinishError(ctx *fasthttp.RequestCtx, err error) {
+	ctx.WriteString(err.Error())
+	ctx.SetStatusCode(fasthttp.StatusInternalServerError)
+	log.Error(err)
+}
+
+func httpFinishOK(ctx *fasthttp.RequestCtx, data string) {
+	ctx.WriteString(data)
+	ctx.SetStatusCode(fasthttp.StatusOK)
+}
+
 func httpRootHandler(ctx *fasthttp.RequestCtx) {
 	httpInitRequest(ctx)
-	ctx.WriteString("OK")
+	var err error
+
+	var chats []*tgbotapi.Chat
+	if chats, err = getChats(); err != nil {
+		httpFinishError(ctx, err)
+		return
+	}
+
+	ctx.WriteString(htmlHeader)
+	ctx.WriteString(`<p>Chats:</p>
+	<ul>`)
+
+	for _, chat := range chats {
+		fmt.Sprintf(`<li><a href="/chat/%d">%s</a></li>`, chat.ID, chat.Title)
+	}
+	ctx.WriteString("</ul>")
+	ctx.WriteString(htmlFooter)
+	//ctx.WriteString("OK")
 	ctx.SetStatusCode(fasthttp.StatusOK)
 }
 
