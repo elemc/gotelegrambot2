@@ -30,12 +30,21 @@ func InitDatabase() (err error) {
 }
 
 func dbSaveMessage(msg *tgbotapi.Message) (err error) {
+	temp := *msg.Chat
+	if err = db.Select(&temp); err != nil && err == pg.ErrNoRows {
+		if err = db.Insert(msg.Chat); err != nil {
+			return
+		}
+	} else if err != nil {
+		return
+	}
 	return db.Insert(convertMessage(msg))
 }
 
 func createTables() (err error) {
 	tables := []interface{}{
 		&Message{},
+		&tgbotapi.Chat{},
 	}
 
 	for _, t := range tables {
