@@ -1,0 +1,13 @@
+[main]
+api_key = "304082431:AAEfcwuTMIPuxzQb1F7WfPAezmpheXLMbtU"
+debug = false
+static_path = "static"
+
+[http]
+addr = "localhost:8080"
+
+[pgsql]
+dsn = "postgres://gotb:gotb@localhost/gotb?sslmode=disable"
+
+[log]
+level = "debug"
