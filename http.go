@@ -144,6 +144,8 @@ func httpRootHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
+	log.Debugf("Chats count: %d", len(chats))
+
 	for _, chat := range chats {
 		if chat.IsGroup() || chat.IsSuperGroup() {
 			groups = append(groups, fmt.Sprintf(`<li><a href="/chat/%d">%s</a></li>`, chat.ID, chat.Title))
@@ -351,6 +353,7 @@ func httpDayHandler(ctx *fasthttp.RequestCtx) {
 </thead>
 <tbody>`)
 
+	log.Debugf("Message count: %d", len(msgs))
 	for _, msg := range msgs {
 		messageTime := time.Unix(int64(msg.Date), 0).Format("15:04:05")
 		user := msg.UserFrom.String()
@@ -365,8 +368,8 @@ func httpDayHandler(ctx *fasthttp.RequestCtx) {
 
 		var photo string
 		if photo, err = getUserPhotoFilename(msg.UserFrom); err != nil {
-			log.Errorf("Unable to get user photo file name for user %d (%s): %s", msg.UserFrom.ID, msg.UserFrom.String(), err)
-			continue
+			//log.Errorf("Unable to get user photo file name for user %d (%s): %s", msg.UserFrom.ID, msg.UserFrom.String(), err)
+			//continue
 		}
 		if msg.Audio != nil {
 			messageText += fmt.Sprintf(`<p><a href="/static/%s">Audio in message</a></p>`, getShortFileName(msg.Audio.FileID))
