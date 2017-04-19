@@ -8,8 +8,11 @@ package main
 
 import (
 	"fmt"
+	"html"
+	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/buaazp/fasthttprouter"
@@ -337,7 +340,7 @@ func httpDayHandler(ctx *fasthttp.RequestCtx) {
 
 	ctx.WriteString("<h2>Messages:</h2>")
 
-	ctx.WriteString(`<table>
+	ctx.WriteString(`<table width="80%">
 <thead>
 	<tr>
 		<th align="center" width="5%"></th>
@@ -348,7 +351,7 @@ func httpDayHandler(ctx *fasthttp.RequestCtx) {
 </thead>
 <tbody>`)
 
-	/*for index, msg := range msgs {
+	for _, msg := range msgs {
 		messageTime := time.Unix(int64(msg.Date), 0).Format("15:04:05")
 		user := msg.UserFrom.String()
 		messageText := html.EscapeString(msg.Text)
@@ -360,8 +363,40 @@ func httpDayHandler(ctx *fasthttp.RequestCtx) {
 			messageText = fmt.Sprintf(`<p class="reply"> <a href="%s">></a> %s</p><p>%s</p>`, replyLink, html.EscapeString(msg.ReplyToMessage.Text), messageText)
 		}
 
-		//photo := getPhotoFileName(int64(msg.UserFrom.ID))
-	}*/
+		var photo string
+		if photo, err = getUserPhotoFilename(msg.UserFrom); err != nil {
+			log.Errorf("Unable to get user photo file name for user %d (%s): %s", msg.UserFrom.ID, msg.UserFrom.String(), err)
+			continue
+		}
+		if msg.Audio != nil {
+			messageText += fmt.Sprintf(`<p><a href="/static/%s">Audio in message</a></p>`, getShortFileName(msg.Audio.FileID))
+		}
+		if msg.Document != nil {
+			messageText += fmt.Sprintf(`<p><a href="/static/%s">Document in message</a></p>`, getShortFileName(msg.Document.FileID))
+		}
+		if msg.Photo != nil {
+			f := (*msg.Photo)[len(*msg.Photo)-1]
+			messageText += "<p>"
+			messageText += fmt.Sprintf(`<p><a href="/static/%s"><img src="/static/%s"></img></a>`, getShortFileName(f.FileID), getShortFileName(f.FileID))
+			messageText += "</p>"
+		}
+		if msg.Sticker != nil {
+			messageText += fmt.Sprintf(`<p><img src="/static/%s"></img></p>`, getShortFileName(msg.Sticker.FileID))
+		}
+		if msg.Video != nil {
+			messageText += fmt.Sprintf(`<p><a href="/static/%s">Video in message</a></p>`, getShortFileName(msg.Video.FileID))
+		}
+		if msg.Voice != nil {
+			messageText += fmt.Sprintf(`<p><a href="/static/%s">Voice in message</a></p>`, getShortFileName(msg.Voice.FileID))
+		}
+
+		ctx.WriteString(fmt.Sprintf(`	<tr style="background-color: #F5F5F5;">
+		<td align="center"><a href="/%s"><img src="/%s" height="30px" width="30px"></img></td>
+		<td align="center"><a href="#%s" id="%s">%s</a></td>
+		<td><strong>%s</strong></td>
+		<td>%s</td>
+	<tr>`, photo, photo, messageTime, messageTime, messageTime, html.EscapeString(user), messageText))
+	}
 
 	ctx.WriteString("</tbody>\n</table>")
 	ctx.WriteString(htmlFooter)

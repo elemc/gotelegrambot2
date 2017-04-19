@@ -138,6 +138,5 @@ func getUsers() (users []tgbotapi.User, err error) {
 		log.Error(err)
 		return
 	}
-	log.Debugf("%+v", users)
 	return
 }
