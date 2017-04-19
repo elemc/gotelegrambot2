@@ -8,6 +8,8 @@ package main
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/buaazp/fasthttprouter"
@@ -78,57 +80,290 @@ func httpInitRequest(ctx *fasthttp.RequestCtx) {
 	log.WithFields(fields).Debugf("Request from %s to %s", ctx.RemoteIP().String(), ctx.URI().String())
 }
 
+func httpFinish(ctx *fasthttp.RequestCtx, status int, data string) {
+	ctx.WriteString(data)
+	ctx.SetStatusCode(status)
+}
+
 func httpFinishError(ctx *fasthttp.RequestCtx, err error) {
-	ctx.WriteString(err.Error())
-	ctx.SetStatusCode(fasthttp.StatusInternalServerError)
+	httpFinish(ctx, fasthttp.StatusInternalServerError, err.Error())
 	log.Error(err)
 }
 
+func httpFinishBadParam(ctx *fasthttp.RequestCtx, data string) {
+	httpFinish(ctx, fasthttp.StatusBadRequest, data)
+	log.Warnf(data)
+}
+
 func httpFinishOK(ctx *fasthttp.RequestCtx, data string) {
-	ctx.WriteString(data)
-	ctx.SetStatusCode(fasthttp.StatusOK)
+	httpFinish(ctx, fasthttp.StatusOK, data)
+	log.Debugf("Status OK: %s", data)
+}
+
+func writeStringList(ctx *fasthttp.RequestCtx, name string, list []string) {
+	if len(list) > 0 {
+		ctx.WriteString(fmt.Sprintf("<h2>%s:</h2>\n<ul>", name))
+		ctx.WriteString(strings.Join(list, "\n"))
+		ctx.WriteString("</ul>")
+	}
+}
+
+func writeTable(ctx *fasthttp.RequestCtx, path string, data []string, columns int) {
+	currentColumn := 0
+	ctx.WriteString("\n<table>\n\t<tr>\n")
+	for _, d := range data {
+		currentColumn++
+		if currentColumn > columns {
+			currentColumn = 1
+			ctx.WriteString("\t</tr>\n\t<tr>\n")
+		}
+		ctx.WriteString(fmt.Sprintf("\t\t<td>\n\t\t\t<a href='%s/%s'>%s</a>\n\t\t</td>\n", path, d, d))
+	}
+	for i := currentColumn + 1; i <= columns; i++ {
+		ctx.WriteString("\t\t<td></td>\n")
+	}
+	ctx.WriteString("\t</tr>\n</table>\n")
 }
 
 func httpRootHandler(ctx *fasthttp.RequestCtx) {
 	httpInitRequest(ctx)
-	var err error
+	ctx.SetContentType("text/html")
 
-	var chats []*tgbotapi.Chat
+	var (
+		err          error
+		chats        []tgbotapi.Chat
+		privateChats []string
+		groups       []string
+		channels     []string
+	)
 	if chats, err = getChats(); err != nil {
 		httpFinishError(ctx, err)
 		return
 	}
 
-	ctx.WriteString(htmlHeader)
-	ctx.WriteString(`<p>Chats:</p>
-	<ul>`)
-
 	for _, chat := range chats {
-		fmt.Sprintf(`<li><a href="/chat/%d">%s</a></li>`, chat.ID, chat.Title)
+		if chat.IsGroup() || chat.IsSuperGroup() {
+			groups = append(groups, fmt.Sprintf(`<li><a href="/chat/%d">%s</a></li>`, chat.ID, chat.Title))
+		} else if chat.IsPrivate() {
+			chatName := ""
+			if chat.UserName == "" {
+				chatName = strings.TrimSpace(fmt.Sprintf("%s %s", chat.FirstName, chat.LastName))
+			} else if chat.FirstName != "" || chat.LastName != "" {
+				chatName = strings.TrimSpace(fmt.Sprintf("%s (%s %s)", chat.UserName, chat.FirstName, chat.LastName))
+			}
+			privateChats = append(privateChats, fmt.Sprintf(`<li><a href="/chat/%d">%s</a></li>`, chat.ID, chatName))
+		} else if chat.IsChannel() {
+			channels = append(channels, fmt.Sprintf(`<li><a href="/chat/%d">%s</a></li>`, chat.ID, chat.Title))
+		}
 	}
-	ctx.WriteString("</ul>")
+
+	ctx.WriteString(htmlHeader)
+	writeStringList(ctx, "Groups", groups)
+	writeStringList(ctx, "Users", privateChats)
+	writeStringList(ctx, "Channels", channels)
 	ctx.WriteString(htmlFooter)
-	//ctx.WriteString("OK")
+
 	ctx.SetStatusCode(fasthttp.StatusOK)
 }
 
 func httpChatHandler(ctx *fasthttp.RequestCtx) {
 	httpInitRequest(ctx)
-	ctx.WriteString("OK")
+	var (
+		err    error
+		years  []string
+		chatID int64
+	)
+
+	strChatID := ctx.UserValue("chat").(string)
+	if chatID, err = strconv.ParseInt(strChatID, 10, 64); err != nil {
+		httpFinishBadParam(ctx, fmt.Sprintf("Chat ID is not integer"))
+		log.Error(err)
+		return
+	}
+
+	ctx.SetContentType("text/html")
+	ctx.WriteString(htmlHeader)
+
+	if years, err = getChatYears(chatID); err != nil {
+		httpFinishError(ctx, err)
+		return
+	}
+
+	if len(years) == 0 {
+		httpFinishOK(ctx, htmlFooter)
+		return
+	}
+
+	ctx.WriteString("<h2>Years:</h2>")
+	writeTable(ctx, fmt.Sprintf("/chat/%d", chatID), years, 3)
+	ctx.WriteString(htmlFooter)
 	ctx.SetStatusCode(fasthttp.StatusOK)
 }
 func httpYearHandler(ctx *fasthttp.RequestCtx) {
 	httpInitRequest(ctx)
-	ctx.WriteString("OK")
+	var (
+		err    error
+		months []string
+		chatID int64
+		year   int
+	)
+
+	strChatID := ctx.UserValue("chat").(string)
+	if chatID, err = strconv.ParseInt(strChatID, 10, 64); err != nil {
+		httpFinishBadParam(ctx, fmt.Sprintf("Chat ID is not integer"))
+		log.Error(err)
+		return
+	}
+	strYear := ctx.UserValue("year").(string)
+	if year, err = strconv.Atoi(strYear); err != nil {
+		httpFinishBadParam(ctx, fmt.Sprintf("Year is not integer"))
+		log.Error(err)
+		return
+	}
+
+	ctx.SetContentType("text/html")
+	ctx.WriteString(htmlHeader)
+
+	if months, err = getChatMonths(chatID, year); err != nil {
+		httpFinishError(ctx, err)
+		return
+	}
+
+	if len(months) == 0 {
+		httpFinishOK(ctx, htmlFooter)
+		return
+	}
+
+	ctx.WriteString("<h2>Months:</h2>")
+	writeTable(ctx, fmt.Sprintf("/chat/%d/%d", chatID, year), months, 4)
+	ctx.WriteString(htmlFooter)
 	ctx.SetStatusCode(fasthttp.StatusOK)
 }
 func httpMonthHandler(ctx *fasthttp.RequestCtx) {
 	httpInitRequest(ctx)
-	ctx.WriteString("OK")
+	var (
+		err    error
+		days   []string
+		chatID int64
+		year   int
+		month  int
+	)
+
+	strChatID := ctx.UserValue("chat").(string)
+	if chatID, err = strconv.ParseInt(strChatID, 10, 64); err != nil {
+		httpFinishBadParam(ctx, fmt.Sprintf("Chat ID is not integer"))
+		log.Error(err)
+		return
+	}
+	strYear := ctx.UserValue("year").(string)
+	if year, err = strconv.Atoi(strYear); err != nil {
+		httpFinishBadParam(ctx, fmt.Sprintf("Year is not integer"))
+		log.Error(err)
+		return
+	}
+	strMonth := ctx.UserValue("month").(string)
+	if month, err = strconv.Atoi(strMonth); err != nil {
+		httpFinishBadParam(ctx, fmt.Sprintf("Month is not integer"))
+		log.Error(err)
+		return
+	}
+
+	ctx.SetContentType("text/html")
+	ctx.WriteString(htmlHeader)
+
+	if days, err = getChatDays(chatID, year, month); err != nil {
+		httpFinishError(ctx, err)
+		return
+	}
+
+	if len(days) == 0 {
+		httpFinishOK(ctx, htmlFooter)
+		return
+	}
+
+	ctx.WriteString("<h2>Days:</h2>")
+	writeTable(ctx, fmt.Sprintf("/chat/%d/%d/%d", chatID, year, month), days, 5)
+	ctx.WriteString(htmlFooter)
 	ctx.SetStatusCode(fasthttp.StatusOK)
 }
 func httpDayHandler(ctx *fasthttp.RequestCtx) {
 	httpInitRequest(ctx)
-	ctx.WriteString("OK")
+	var (
+		err    error
+		msgs   []Message
+		chatID int64
+		year   int
+		month  int
+		day    int
+	)
+
+	strChatID := ctx.UserValue("chat").(string)
+	if chatID, err = strconv.ParseInt(strChatID, 10, 64); err != nil {
+		httpFinishBadParam(ctx, fmt.Sprintf("Chat ID is not integer"))
+		log.Error(err)
+		return
+	}
+	strYear := ctx.UserValue("year").(string)
+	if year, err = strconv.Atoi(strYear); err != nil {
+		httpFinishBadParam(ctx, fmt.Sprintf("Year is not integer"))
+		log.Error(err)
+		return
+	}
+	strMonth := ctx.UserValue("month").(string)
+	if month, err = strconv.Atoi(strMonth); err != nil {
+		httpFinishBadParam(ctx, fmt.Sprintf("Month is not integer"))
+		log.Error(err)
+		return
+	}
+	strDay := ctx.UserValue("day").(string)
+	if day, err = strconv.Atoi(strDay); err != nil {
+		httpFinishBadParam(ctx, fmt.Sprintf("Day is not integer"))
+		log.Error(err)
+		return
+	}
+
+	ctx.SetContentType("text/html")
+	ctx.WriteString(htmlHeader)
+
+	if msgs, err = getMessages(chatID, year, month, day); err != nil {
+		httpFinishError(ctx, err)
+		return
+	}
+
+	if len(msgs) == 0 {
+		httpFinishOK(ctx, htmlFooter)
+		return
+	}
+
+	ctx.WriteString("<h2>Messages:</h2>")
+
+	ctx.WriteString(`<table>
+<thead>
+	<tr>
+		<th align="center" width="5%"></th>
+		<th align="center width="10%">Time</th>
+		<th align="center" width="10%">User</th>
+		<th align="center" width="75%">Message</th>
+	</tr>
+</thead>
+<tbody>`)
+
+	/*for index, msg := range msgs {
+		messageTime := time.Unix(int64(msg.Date), 0).Format("15:04:05")
+		user := msg.UserFrom.String()
+		messageText := html.EscapeString(msg.Text)
+		re := regexp.MustCompile(`(http|ftp|https):\/\/([\w\-_]+(?:(?:\.[\w\-_]+)+))([\w\-\.,@?^=%&amp;:/~\+#]*[\w\-\@?^=%&amp;/~\+#])?`)
+		messageText = re.ReplaceAllString(messageText, `<a href="$0">$0</a>`)
+		if msg.ReplyToMessage != nil {
+			lt := time.Unix(int64(msg.ReplyToMessage.Date), 0)
+			replyLink := fmt.Sprintf("/chat/%d/%d/%d/%d#%s", msg.Chat.ID, lt.Year(), lt.Month(), lt.Day(), lt.Format("15:04:05"))
+			messageText = fmt.Sprintf(`<p class="reply"> <a href="%s">></a> %s</p><p>%s</p>`, replyLink, html.EscapeString(msg.ReplyToMessage.Text), messageText)
+		}
+
+		//photo := getPhotoFileName(int64(msg.UserFrom.ID))
+	}*/
+
+	ctx.WriteString("</tbody>\n</table>")
+	ctx.WriteString(htmlFooter)
 	ctx.SetStatusCode(fasthttp.StatusOK)
 }

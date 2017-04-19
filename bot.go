@@ -17,7 +17,8 @@ import (
 )
 
 var (
-	bot *tgbotapi.BotAPI
+	bot        *tgbotapi.BotAPI
+	photoCache map[int64]string
 )
 
 func botServe() (err error) {
@@ -26,11 +27,15 @@ func botServe() (err error) {
 	)
 	defer wg.Done()
 
+	photoCache = make(map[int64]string)
+
 	if bot, err = tgbotapi.NewBotAPI(options.APIKey); err != nil {
 		return
 	}
 	bot.Debug = options.Debug
 	log.Debug("Telegram bot initialized sucessful")
+
+	go updatePhotoCache()
 
 	updateOptions := tgbotapi.NewUpdate(0)
 	updateOptions.Timeout = 60
@@ -126,4 +131,8 @@ func downloadImage(url string, filename string) (err error) {
 		return
 	}
 	return
+}
+
+func updatePhotoCache() {
+	getUsers()
 }

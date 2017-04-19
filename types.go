@@ -48,6 +48,15 @@ type Message struct {
 	PinnedMessage         *Message                  `json:"pinned_message"`          // optional
 }
 
+type Chat struct {
+	ID        int64  `json:"id"`
+	Type      string `json:"type"`
+	Title     string `json:"title"`      // optional
+	UserName  string `json:"username"`   // optional
+	FirstName string `json:"first_name"` // optional
+	LastName  string `json:"last_name"`  // optional
+}
+
 func convertMessage(m *tgbotapi.Message) (msg *Message) {
 	if m == nil {
 		return nil
