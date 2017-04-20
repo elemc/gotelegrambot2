@@ -15,6 +15,7 @@ import (
 	"sync"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/go-pg/pg"
 	"gopkg.in/telegram-bot-api.v4"
 )
 
@@ -26,6 +27,7 @@ type PhotoCache struct {
 var (
 	bot        *tgbotapi.BotAPI
 	photoCache PhotoCache
+	filesCache FilesCacheMemory
 )
 
 func botServe() (err error) {
@@ -35,6 +37,7 @@ func botServe() (err error) {
 	defer wg.Done()
 
 	photoCache.cache = make(map[int]string)
+	filesCache.cache = make(map[string]string)
 
 	if bot, err = tgbotapi.NewBotAPI(options.APIKey); err != nil {
 		return
@@ -43,6 +46,7 @@ func botServe() (err error) {
 	log.Debug("Telegram bot initialized sucessful")
 
 	go updatePhotoCache()
+	go filesCache.Update()
 
 	updateOptions := tgbotapi.NewUpdate(0)
 	updateOptions.Timeout = 60
@@ -52,6 +56,9 @@ func botServe() (err error) {
 	}
 
 	for update := range updates {
+		if update.Message == nil {
+			continue
+		}
 		log.Debugf("new update: %+v", *update.Message)
 		if update.Message.Command() == "start" {
 			continue
@@ -86,6 +93,9 @@ func saveMessage(msg *tgbotapi.Message) (err error) {
 	}
 	if msg.Voice != nil {
 		go getFile(msg.Voice.FileID)
+	}
+	if msg.From != nil {
+		go getUserPhoto(msg.From)
 	}
 
 	return dbSaveMessage(msg)
@@ -129,20 +139,40 @@ func getFile(fileID string) {
 		log.Errorf("Unable to download file for FileID [%s]: %s", fileID, err)
 		return
 	}
+	if err = dbSaveFileToCahce(fileID, filename); err != nil {
+		log.Errorf("Unabel to save file to cache ID %s file name %s: %s", fileID, filename, err)
+		return
+	}
 	log.Debugf("File downloaded for FileID [%s] in %s", fileID, filename)
 }
 
 func getShortFileName(fileID string) (filename string) {
 	var (
-		f   tgbotapi.File
-		err error
+		fcache FileCache
+		f      tgbotapi.File
+		err    error
 	)
+
+	if fn := filesCache.Get(fileID); fn != "" {
+		return fn
+	}
+
+	if fcache, err = getFileFromCache(fileID); err != nil && err != pg.ErrNoRows {
+		log.Errorf("Unable to get file from cache file ID %s: %s", fileID, err)
+	} else if err == nil {
+		log.Debugf("File with ID %s found in cache: %s", fileID, fcache.FileName)
+		return fcache.FileName
+	}
 
 	config := tgbotapi.FileConfig{FileID: fileID}
 	if f, err = bot.GetFile(config); err != nil {
 		return
 	}
 	filename = f.FilePath
+	if err = dbSaveFileToCahce(fileID, filename); err != nil {
+		log.Errorf("Unable to save file cache for ID=%s and file name %s: %s", fileID, filename, err)
+	}
+
 	return
 }
 
@@ -233,6 +263,7 @@ func getUserPhoto(user *tgbotapi.User) (err error) {
 }
 
 func updatePhotoCache() {
+	log.Debugf("Start update photo cache...")
 	var (
 		users []tgbotapi.User
 		err   error
@@ -250,4 +281,5 @@ func updatePhotoCache() {
 			}
 		}()
 	}
+	log.Debugf("Finish update photo cache.")
 }

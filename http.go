@@ -144,8 +144,6 @@ func httpRootHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	log.Debugf("Chats count: %d", len(chats))
-
 	for _, chat := range chats {
 		if chat.IsGroup() || chat.IsSuperGroup() {
 			groups = append(groups, fmt.Sprintf(`<li><a href="/chat/%d">%s</a></li>`, chat.ID, chat.Title))
@@ -353,24 +351,26 @@ func httpDayHandler(ctx *fasthttp.RequestCtx) {
 </thead>
 <tbody>`)
 
-	log.Debugf("Message count: %d", len(msgs))
+	var data []string
 	for _, msg := range msgs {
+		//bt := time.Now().Unix()
+
 		messageTime := time.Unix(int64(msg.Date), 0).Format("15:04:05")
 		user := msg.UserFrom.String()
 		messageText := html.EscapeString(msg.Text)
 		re := regexp.MustCompile(`(http|ftp|https):\/\/([\w\-_]+(?:(?:\.[\w\-_]+)+))([\w\-\.,@?^=%&amp;:/~\+#]*[\w\-\@?^=%&amp;/~\+#])?`)
 		messageText = re.ReplaceAllString(messageText, `<a href="$0">$0</a>`)
+
+		//et := time.Now().Unix()
+		//log.Debugf("Duration: %d", et-bt)
+
 		if msg.ReplyToMessage != nil {
 			lt := time.Unix(int64(msg.ReplyToMessage.Date), 0)
 			replyLink := fmt.Sprintf("/chat/%d/%d/%d/%d#%s", msg.Chat.ID, lt.Year(), lt.Month(), lt.Day(), lt.Format("15:04:05"))
 			messageText = fmt.Sprintf(`<p class="reply"> <a href="%s">></a> %s</p><p>%s</p>`, replyLink, html.EscapeString(msg.ReplyToMessage.Text), messageText)
 		}
 
-		var photo string
-		if photo, err = getUserPhotoFilename(msg.UserFrom); err != nil {
-			//log.Errorf("Unable to get user photo file name for user %d (%s): %s", msg.UserFrom.ID, msg.UserFrom.String(), err)
-			//continue
-		}
+		photo, _ := getUserPhotoFilename(msg.UserFrom)
 		if msg.Audio != nil {
 			messageText += fmt.Sprintf(`<p><a href="/static/%s">Audio in message</a></p>`, getShortFileName(msg.Audio.FileID))
 		}
@@ -398,13 +398,14 @@ func httpDayHandler(ctx *fasthttp.RequestCtx) {
 			photoTD = `<td align="center">no image</td>`
 		}
 
-		ctx.WriteString(fmt.Sprintf(`	<tr style="background-color: #F5F5F5;">
+		data = append(data, (fmt.Sprintf(`	<tr style="background-color: #F5F5F5;">
 		%s
 		<td align="center"><a href="#%s" id="%s">%s</a></td>
 		<td><strong>%s</strong></td>
 		<td>%s</td>
-	<tr>`, photoTD, messageTime, messageTime, messageTime, html.EscapeString(user), messageText))
+	<tr>`, photoTD, messageTime, messageTime, messageTime, html.EscapeString(user), messageText)))
 	}
+	ctx.WriteString(strings.Join(data, "\n"))
 
 	ctx.WriteString("</tbody>\n</table>")
 	ctx.WriteString(htmlFooter)

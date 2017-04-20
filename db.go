@@ -17,6 +17,11 @@ import (
 	"gopkg.in/telegram-bot-api.v4"
 )
 
+type FileCache struct {
+	FileID   string `sql:",pk"`
+	FileName string
+}
+
 var (
 	db *pg.DB
 )
@@ -69,6 +74,7 @@ func createTables() (err error) {
 		&Message{},
 		&tgbotapi.Chat{},
 		&tgbotapi.User{},
+		&FileCache{},
 	}
 
 	for _, t := range tables {
@@ -127,7 +133,7 @@ func getMessages(chatID int64, year, month, day int) (msgs []Message, err error)
 	beginTime := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.Local).Unix()
 	endTime := time.Date(year, time.Month(month), day, 23, 59, 59, 100, time.Local).Unix()
 
-	if err = db.Model(&msgs).Where("date >= ? AND date <= ? AND chat @> '{\"id\": ?}'", beginTime, endTime, chatID).Select(); err != nil {
+	if err = db.Model(&msgs).Order("date").Where("date >= ? AND date <= ? AND chat @> '{\"id\": ?}'", beginTime, endTime, chatID).Select(); err != nil {
 		return
 	}
 	return
@@ -136,6 +142,29 @@ func getMessages(chatID int64, year, month, day int) (msgs []Message, err error)
 func getUsers() (users []tgbotapi.User, err error) {
 	if err = db.Model(&users).Select(); err != nil {
 		log.Error(err)
+		return
+	}
+	return
+}
+
+func getFileFromCache(fileID string) (file FileCache, err error) {
+	file.FileID = fileID
+	err = db.Select(&file)
+	return
+}
+
+func dbSaveFileToCahce(fileID, filename string) (err error) {
+	f := FileCache{
+		FileID:   fileID,
+		FileName: filename,
+	}
+	filesCache.Set(fileID, filename)
+	err = db.Insert(&f)
+	return
+}
+
+func getFilesFromCache() (files []FileCache, err error) {
+	if err = db.Model(&files).Select(); err != nil {
 		return
 	}
 	return
