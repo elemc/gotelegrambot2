@@ -54,17 +54,18 @@ func commandsDNFHandler(msg *tgbotapi.Message) {
 	}
 
 	arglist := strings.Split(args, " ")
-	arglist = append(arglist, "-q")
-	if arglist[0] == "info" || arglist[0] == "provides" || arglist[0] == "repolist" {
+	if arglist[0] == "info" || arglist[0] == "provides" || arglist[0] == "repolist" || arglist[0] == "repoquery" {
+		if arglist[0] != "repolist" {
+			arglist = append(arglist, "-q")
+		}
 		cmd := exec.Command("/usr/bin/dnf", arglist...)
 		if output, err := cmd.CombinedOutput(); err != nil {
 			sendMessage(msg.Chat.ID, fmt.Sprintf("Error: ```%s```", err), msg.MessageID)
-			log.Errorf("Unable to run command: dnf %s %s: %s", arglist[0], strings.Join(arglist[1:], " "), err)
+			log.Errorf("Unable to run command: dnf %s %s: %s", arglist[0], strings.Join(arglist, " "), err)
 			return
 		} else {
 			sendMessage(msg.Chat.ID, fmt.Sprintf("``` %s ```", output), msg.MessageID)
-			log.Debugf("Run command from %s: dnf %s", msg.From.String(), strings.Join(arglist[1:], " "))
+			log.Debugf("Run command from %s: dnf %s", msg.From.String(), strings.Join(arglist, " "))
 		}
-
 	}
 }
