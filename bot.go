@@ -60,14 +60,16 @@ func botServe() (err error) {
 			continue
 		}
 		log.Debugf("new update: %+v", *update.Message)
-		if update.Message.Command() == "start" {
-			continue
-		}
 		go func() {
 			if err = saveMessage(update.Message); err != nil {
 				log.Errorf("Unable to save message: %s", err)
 			}
 		}()
+
+		// command handler
+		if update.Message.Command() != "" {
+			go commandsMainHandler(update.Message)
+		}
 	}
 	return
 }
@@ -282,4 +284,24 @@ func updatePhotoCache() {
 		}()
 	}
 	log.Debugf("Finish update photo cache.")
+}
+
+func sendMessage(chatID int64, text string, replyID int) {
+	var (
+		omsg tgbotapi.Message
+		err  error
+	)
+
+	msg := tgbotapi.NewMessage(chatID, text)
+	if replyID != 0 {
+		msg.ReplyToMessageID = replyID
+	}
+	if omsg, err = bot.Send(msg); err != nil {
+		log.Errorf("Unable to send message to %d with text [%s] and reply [%d]: %s", chatID, text, replyID, err)
+		return
+	}
+
+	if err = saveMessage(&omsg); err != nil {
+		log.Errorf("Unable to save outgoing message: %s", err)
+	}
 }
