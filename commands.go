@@ -8,6 +8,7 @@ package main
 
 import (
 	"fmt"
+	"os/exec"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
@@ -23,6 +24,8 @@ func commandsMainHandler(msg *tgbotapi.Message) {
 		go commandsStartHandler(msg)
 	case "ban":
 		go commandsBanHandler(msg)
+	case "dnf", "yum":
+		go commandsDNFHandler(msg)
 	default:
 
 	}
@@ -39,5 +42,29 @@ func commandsBanHandler(msg *tgbotapi.Message) {
 		sendMessage(msg.Chat.ID, "Кого будем банить в привате? 😂", msg.MessageID)
 		log.Debugf("Command `ban` in private chat from %s", msg.From.String())
 		return
+	}
+}
+
+func commandsDNFHandler(msg *tgbotapi.Message) {
+	args := msg.CommandArguments()
+	if args == "" {
+		sendMessage(msg.Chat.ID, "Не знаю, что выполнять, ты же ничего не указал в аргументах", msg.MessageID)
+		log.Debugf("Command `dnf` without arguments from %s", msg.From.String())
+		return
+	}
+
+	arglist := strings.Split(args, " ")
+	arglist = append(arglist, "-q")
+	if arglist[0] == "info" || arglist[0] == "provides" {
+		cmd := exec.Command("/usr/bin/dnf", arglist...)
+		if output, err := cmd.CombinedOutput(); err != nil {
+			sendMessage(msg.Chat.ID, fmt.Sprintf("Error: ```%s```", err), msg.MessageID)
+			log.Errorf("Unable to run command: dnf %s %s: %s", arglist[0], strings.Join(arglist[1:], " "), err)
+			return
+		} else {
+			sendMessage(msg.Chat.ID, fmt.Sprintf("``` %s ```", output), msg.MessageID)
+			log.Debugf("Run command from %s: dnf %s", msg.From.String(), strings.Join(arglist[1:], " "))
+		}
+
 	}
 }

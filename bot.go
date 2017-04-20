@@ -293,6 +293,7 @@ func sendMessage(chatID int64, text string, replyID int) {
 	)
 
 	msg := tgbotapi.NewMessage(chatID, text)
+	msg.ParseMode = "Markdown"
 	if replyID != 0 {
 		msg.ReplyToMessageID = replyID
 	}
