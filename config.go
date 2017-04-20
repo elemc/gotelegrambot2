@@ -32,6 +32,8 @@ func LoadConfig() (err error) {
 
 	viper.SetConfigName(configName)
 	viper.AddConfigPath(".")
+	viper.AddConfigPath("/etc")
+	viper.AddConfigPath("/usr/local/etc")
 
 	if err = viper.ReadInConfig(); err != nil {
 		return

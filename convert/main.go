@@ -28,13 +28,13 @@ func main() {
 		err error
 	)
 
-	log.Printf("Try to connect to couchbase...")
-	botdb.InitCouchbase(options.CouchbaseCluster, options.CouchbaseBucketName, options.CouchbaseBucketSecret)
-
 	log.Printf("Try to load configuration...")
 	if err = LoadConfig(); err != nil {
 		log.Fatal(err)
 	}
+
+	log.Printf("Try to connect to couchbase...")
+	botdb.InitCouchbase(options.CouchbaseCluster, options.CouchbaseBucketName, options.CouchbaseBucketSecret)
 
 	log.Printf("Try to connect to pgsql...")
 	if err = InitDatabase(); err != nil {
@@ -74,7 +74,7 @@ func main() {
 				continue
 			}
 
-			if err = dbSaveMessage(msg); err != nil {
+			if err = saveMessage(msg); err != nil {
 				log.Printf("Unable to save message %s: %s", msg.Text, err)
 				continue
 			}

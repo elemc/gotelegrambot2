@@ -393,12 +393,17 @@ func httpDayHandler(ctx *fasthttp.RequestCtx) {
 			messageText += fmt.Sprintf(`<p><a href="/static/%s">Voice in message</a></p>`, getShortFileName(msg.Voice.FileID))
 		}
 
+		photoTD := fmt.Sprintf(`<td align="center"><a href="/static/%s"><img src="/static/%s" height="30px" width="30px"></img></td>`, photo, photo)
+		if photo == "" {
+			photoTD = `<td align="center">no image</td>`
+		}
+
 		ctx.WriteString(fmt.Sprintf(`	<tr style="background-color: #F5F5F5;">
-		<td align="center"><a href="/%s"><img src="/%s" height="30px" width="30px"></img></td>
+		%s
 		<td align="center"><a href="#%s" id="%s">%s</a></td>
 		<td><strong>%s</strong></td>
 		<td>%s</td>
-	<tr>`, photo, photo, messageTime, messageTime, messageTime, html.EscapeString(user), messageText))
+	<tr>`, photoTD, messageTime, messageTime, messageTime, html.EscapeString(user), messageText))
 	}
 
 	ctx.WriteString("</tbody>\n</table>")

@@ -110,6 +110,14 @@ func getFile(fileID string) {
 		return
 	}
 
+	var stat os.FileInfo
+	if stat, err = os.Stat(filename); err == nil {
+		if stat.Size() == int64(f.FileSize) {
+			log.Debugf("File %s found. Skip it.", filename)
+			return
+		}
+	}
+
 	// check directory
 	path := filepath.Dir(filename)
 	if err = os.MkdirAll(path, 0755); err != nil {
@@ -170,7 +178,10 @@ func getUserPhotoFilename(user *tgbotapi.User) (filename string, err error) {
 	photoCache.mutex.RLock()
 	if fn, ok := photoCache.cache[user.ID]; ok {
 		photoCache.mutex.RUnlock()
-		return fn, nil
+		if fn == "" {
+			return
+		}
+		return filepath.Base(fn), nil
 	}
 	photoCache.mutex.RUnlock()
 
@@ -181,6 +192,12 @@ func getUserPhotoFilename(user *tgbotapi.User) (filename string, err error) {
 	photoCache.mutex.RLock()
 	filename = photoCache.cache[user.ID]
 	photoCache.mutex.RUnlock()
+
+	if filename == "" {
+		return
+	}
+	filename = filepath.Base(filename)
+
 	return
 }
 
