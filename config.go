@@ -18,6 +18,11 @@ type Options struct {
 	ServerAddr    string
 	Debug         bool
 	StaticDirPath string
+
+	// TODO: remove it, only for converter
+	CouchbaseCluster      string
+	CouchbaseBucketName   string
+	CouchbaseBucketSecret string
 }
 
 var options *Options
@@ -39,6 +44,11 @@ func LoadConfig() (err error) {
 		ServerAddr:    viper.GetString("http.addr"),
 		Debug:         viper.GetBool("main.debug"),
 		StaticDirPath: viper.GetString("main.static_path"),
+
+		// TODO: remove it, only for converter, Couchbase
+		CouchbaseCluster:      viper.GetString("couchbase.cluster"),
+		CouchbaseBucketName:   viper.GetString("couchbase.bucket_name"),
+		CouchbaseBucketSecret: viper.GetString("couchbase.bucket_secret"),
 	}
 	return
 }

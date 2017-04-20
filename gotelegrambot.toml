@@ -11,3 +11,9 @@ dsn = "postgres://gotb:gotb@localhost/gotb?sslmode=disable"
 
 [log]
 level = "debug"
+
+# TODO: remove it, only for converter
+[couchbase]
+cluster = "couchbase://couchbase"
+bucket_name = "RussianFedoraBot"
+bucket_secret = "3510"
