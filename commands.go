@@ -55,7 +55,7 @@ func commandsDNFHandler(msg *tgbotapi.Message) {
 
 	arglist := strings.Split(args, " ")
 	arglist = append(arglist, "-q")
-	if arglist[0] == "info" || arglist[0] == "provides" {
+	if arglist[0] == "info" || arglist[0] == "provides" || arglist[0] == "repolist" {
 		cmd := exec.Command("/usr/bin/dnf", arglist...)
 		if output, err := cmd.CombinedOutput(); err != nil {
 			sendMessage(msg.Chat.ID, fmt.Sprintf("Error: ```%s```", err), msg.MessageID)
