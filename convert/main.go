@@ -56,7 +56,7 @@ func main() {
 		if chat.ID < 0 {
 			chat.Type = "group"
 		} else {
-			chat.ID = "private"
+			chat.Type = "private"
 		}
 		if err = dbSaveChat(chat); err != nil {
 			log.Printf("Unable to save chat with ID %d: %s", chat.ID, err)
