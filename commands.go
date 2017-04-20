@@ -60,7 +60,7 @@ func commandsBanHandler(msg *tgbotapi.Message) {
 }
 
 func commandsDNFHandler(msg *tgbotapi.Message) {
-	args := msg.CommandArguments()
+	args := strings.Replace(msg.CommandArguments(), "—", "--", -1)
 	if args == "" {
 		sendMessage(msg.Chat.ID, "Не знаю, что выполнять, ты же ничего не указал в аргументах", msg.MessageID)
 		log.Debugf("Command `dnf` without arguments from %s", msg.From.String())
@@ -77,6 +77,9 @@ func commandsDNFHandler(msg *tgbotapi.Message) {
 			sendMessage(msg.Chat.ID, fmt.Sprintf("Error: ```%s```", err), msg.MessageID)
 			log.Errorf("Unable to run command: dnf %s %s: %s", arglist[0], strings.Join(arglist, " "), err)
 			return
+		} else if len(output) == 0 {
+			sendMessage(msg.Chat.ID, "А нечего выводить, вывод пустой", msg.MessageID)
+			log.Warnf("Run command from %s: dnf %s with empty output", msg.From.String(), strings.Join(arglist, " "))
 		} else {
 			sendMessage(msg.Chat.ID, fmt.Sprintf("``` %s ```", output), msg.MessageID)
 			log.Debugf("Run command from %s: dnf %s", msg.From.String(), strings.Join(arglist, " "))

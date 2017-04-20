@@ -12,7 +12,9 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/go-pg/pg"
@@ -291,6 +293,45 @@ func sendMessage(chatID int64, text string, replyID int) {
 		omsg tgbotapi.Message
 		err  error
 	)
+
+	mono := false
+	blockSize := 4096
+	if strings.HasPrefix(text, "```") {
+		blockSize = 4088
+		mono = true
+	}
+
+	if len(text) > blockSize {
+		buf := strings.NewReader(strings.TrimPrefix(strings.TrimSuffix(text, "```"), "```"))
+		temp := make([]byte, blockSize)
+		var num uint64
+		for {
+			if num >= 9 {
+				sendMessage(chatID, "Ожидайте, достигнут лимит на количество одновременно отправленных сообщений!", replyID)
+				time.Sleep(time.Second * 300)
+				num = 0
+			}
+			rb, err := buf.ReadAt(temp, int64(blockSize))
+			if err != nil && err != io.EOF {
+				log.Errorf("Unable to read data from buffer: %s", err)
+				break
+			}
+			if mono {
+				t := fmt.Sprintf("``` %s ```", temp)
+				if len(t) > blockSize {
+					log.Fatalf("Message to long: %d", len(t))
+				}
+				sendMessage(chatID, t, replyID)
+			} else {
+				sendMessage(chatID, string(temp), replyID)
+			}
+			num++
+			if err == io.EOF || rb <= 0 {
+				break
+			}
+		}
+		return
+	}
 
 	msg := tgbotapi.NewMessage(chatID, text)
 	msg.ParseMode = "Markdown"
