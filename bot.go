@@ -306,3 +306,43 @@ func sendMessage(chatID int64, text string, replyID int) {
 		log.Errorf("Unable to save outgoing message: %s", err)
 	}
 }
+
+func isUserAdmin(chat *tgbotapi.Chat, user *tgbotapi.User) bool {
+	if chat == nil {
+		return false
+	}
+	var err error
+
+	config := tgbotapi.ChatConfig{}
+	config.ChatID = chat.ID
+
+	var admins []tgbotapi.ChatMember
+	if admins, err = bot.GetChatAdministrators(config); err != nil {
+		log.Errorf("Unable to get chat administrators: %s", err)
+		return false
+	}
+
+	for _, admin := range admins {
+		if admin.User.ID == user.ID {
+			return true
+		}
+	}
+	return false
+}
+
+func isMeAdmin(chat *tgbotapi.Chat) bool {
+	var (
+		me  tgbotapi.User
+		err error
+	)
+
+	if me, err = bot.GetMe(); err != nil {
+		log.Errorf("Unable to get me: %s", err)
+		return false
+	}
+	return isUserAdmin(chat, &me)
+}
+
+func getChatMember(chat *tgbotapi.Chat, user *tgbotapi.User) {
+
+}

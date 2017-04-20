@@ -43,6 +43,20 @@ func commandsBanHandler(msg *tgbotapi.Message) {
 		log.Debugf("Command `ban` in private chat from %s", msg.From.String())
 		return
 	}
+
+	if !isMeAdmin(msg.Chat) {
+		sendMessage(msg.Chat.ID, "Бот не является администратором этого чата. Команда недоступна!", msg.MessageID)
+		log.Warn("Command `ban` in chat with bot not admin from %s", msg.From.String())
+		return
+	} else {
+		log.Debugf("Command `ban` in group or supergroup chat with bot admin from %s", msg.From.String())
+	}
+
+	if msg.CommandArguments() == "" {
+		sendMessage(msg.Chat.ID, "Кого будем банить?", msg.MessageID)
+		log.Debugf("Command `ban` without arguments from %s", msg.From.String())
+		return
+	}
 }
 
 func commandsDNFHandler(msg *tgbotapi.Message) {
