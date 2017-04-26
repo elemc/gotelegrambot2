@@ -143,7 +143,7 @@ func getFile(fileID string) {
 		log.Errorf("Unable to download file for FileID [%s]: %s", fileID, err)
 		return
 	}
-	if err = dbSaveFileToCahce(fileID, filename); err != nil {
+	if err = dbSaveFileToCahce(fileID, f.FilePath); err != nil {
 		log.Errorf("Unabel to save file to cache ID %s file name %s: %s", fileID, filename, err)
 		return
 	}
