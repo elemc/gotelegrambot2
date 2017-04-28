@@ -295,7 +295,7 @@ func sendMessage(chatID int64, text string, replyID int) {
 	)
 
 	mono := false
-	blockSize := 4096
+	blockSize := 8196
 	if strings.HasPrefix(text, "```") {
 		blockSize = 4088
 		mono = true
@@ -311,7 +311,7 @@ func sendMessage(chatID int64, text string, replyID int) {
 				time.Sleep(time.Second * 300)
 				num = 0
 			}
-			rb, err := buf.ReadAt(temp, int64(blockSize))
+			rb, err := buf.Read(temp)
 			if err != nil && err != io.EOF {
 				log.Errorf("Unable to read data from buffer: %s", err)
 				break

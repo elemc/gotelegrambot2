@@ -60,6 +60,7 @@ func commandsBanHandler(msg *tgbotapi.Message) {
 }
 
 func commandsDNFHandler(msg *tgbotapi.Message) {
+	var err error
 	args := strings.Replace(msg.CommandArguments(), "—", "--", -1)
 	if args == "" {
 		sendMessage(msg.Chat.ID, "Не знаю, что выполнять, ты же ничего не указал в аргументах", msg.MessageID)
@@ -69,14 +70,25 @@ func commandsDNFHandler(msg *tgbotapi.Message) {
 
 	arglist := strings.Split(args, " ")
 	if arglist[0] == "info" || arglist[0] == "provides" || arglist[0] == "repolist" || arglist[0] == "repoquery" {
-		if arglist[0] != "repolist" {
+		if arglist[0] != "repolist" { //&& arglist[0] != "repoquery" {
 			arglist = append(arglist, "-q")
 		}
 		cmd := exec.Command("/usr/bin/dnf", arglist...)
-		if output, err := cmd.CombinedOutput(); err != nil {
-			sendMessage(msg.Chat.ID, fmt.Sprintf("Error: ```%s```", err), msg.MessageID)
-			log.Errorf("Unable to run command: dnf %s %s: %s", arglist[0], strings.Join(arglist, " "), err)
+		if err = cmd.Start(); err != nil {
+			log.Errorf("Unable to start command form %s: dnf %s: %s", msg.From.String(), strings.Join(arglist, " "), strings.Join(arglist, " "))
+			sendMessage(msg.Chat.ID, "Ой. Что-то пошло не так!", msg.MessageID)
 			return
+		}
+		if err = cmd.Wait(); err != nil {
+			log.Errorf("Unable to wait command form %s: dnf %s: %s", msg.From.String(), strings.Join(arglist, " "), strings.Join(arglist, " "))
+			sendMessage(msg.Chat.ID, "Ой. Что-то пошло не так!", msg.MessageID)
+			return
+		}
+
+		f, _ := cmd.StdoutPipe()
+		defer f.Close()
+
+		if output, err := cmd.CombinedOutput(); err != nil {
 		} else if len(output) == 0 {
 			sendMessage(msg.Chat.ID, "А нечего выводить, вывод пустой", msg.MessageID)
 			log.Warnf("Run command from %s: dnf %s with empty output", msg.From.String(), strings.Join(arglist, " "))
