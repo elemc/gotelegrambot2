@@ -1,7 +1,7 @@
 // -*- Go -*-
 /* ------------------------------------------------ */
 /* Golang source                                    */
-/* Author: Алексей Панов <a.panov@maximatelecom.ru> */
+/* Author: Alexei Panov <me@elemc.name> 			*/
 /* ------------------------------------------------ */
 
 package main
@@ -41,6 +41,7 @@ func main() {
 	if err = InitDatabase(); err != nil {
 		log.Fatalf("Unable to connect to database: %s", err)
 	}
+	go cacheUpdate()
 
 	wg.Add(1)
 	go func() {

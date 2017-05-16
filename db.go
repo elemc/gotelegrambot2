@@ -1,7 +1,7 @@
 // -*- Go -*-
 /* ------------------------------------------------ */
 /* Golang source                                    */
-/* Author: Алексей Панов <a.panov@maximatelecom.ru> */
+/* Author: Alexei Panov <me@elemc.name> 			*/
 /* ------------------------------------------------ */
 
 package main
@@ -21,6 +21,11 @@ import (
 type FileCache struct {
 	FileID   string `sql:",pk"`
 	FileName string
+}
+
+type Flooder struct {
+	UserID int `sql:",pk"`
+	Level  int
 }
 
 var (
@@ -76,6 +81,8 @@ func createTables() (err error) {
 		&tgbotapi.Chat{},
 		&tgbotapi.User{},
 		&FileCache{},
+		&Flooder{},
+		&Cache{},
 	}
 
 	for _, t := range tables {
@@ -207,5 +214,53 @@ func getFilesFromCache() (files []FileCache, err error) {
 	if err = db.Model(&files).Select(); err != nil {
 		return
 	}
+	return
+}
+
+func dbSetFloodLevel(userID, level int) (err error) {
+	flooder := Flooder{UserID: userID}
+	if err = db.Select(&flooder); err != nil && err != pg.ErrNoRows {
+		return
+	} else if err == pg.ErrNoRows {
+		flooder.Level = level
+		if err = db.Insert(&flooder); err != nil {
+			return
+		}
+		return
+	}
+	flooder.Level = level
+	err = db.Update(&flooder)
+	return
+}
+
+func dbAddFloodLevel(userID int) (currentLevel int, err error) {
+	flooder := Flooder{UserID: userID}
+	if err = db.Select(&flooder); err != nil && err != pg.ErrNoRows {
+		return
+	} else if err == pg.ErrNoRows {
+		flooder.Level = 1
+		if err = db.Insert(&flooder); err != nil {
+			return
+		}
+		return 1, nil
+	}
+
+	flooder.Level += 1
+	if err = db.Update(&flooder); err != nil {
+		return
+	}
+	currentLevel = flooder.Level
+	return
+}
+
+func dbGetFloodLevel(userID int) (level int, err error) {
+	flooder := Flooder{UserID: userID}
+	if err = db.Select(&flooder); err != nil && err != pg.ErrNoRows {
+		return
+	} else if err == pg.ErrNoRows {
+		return 0, nil
+	}
+
+	level = flooder.Level
 	return
 }

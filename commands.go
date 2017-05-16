@@ -1,13 +1,14 @@
 // -*- Go -*-
 /* ------------------------------------------------ */
 /* Golang source                                    */
-/* Author: Алексей Панов <a.panov@maximatelecom.ru> */
+/* Author: Alexei Panov <me@elemc.name> 			*/
 /* ------------------------------------------------ */
 
 package main
 
 import (
 	"fmt"
+	"math/rand"
 	"os/exec"
 	"strings"
 
@@ -28,6 +29,10 @@ func commandsMainHandler(msg *tgbotapi.Message) {
 		go commandsDNFHandler(msg)
 	case "flood":
 		go commandsFloodHandler(msg)
+	case "ping":
+		go commandsPingHandler(msg)
+	case "help":
+		go commandsHelpHandler(msg)
 	default:
 
 	}
@@ -39,11 +44,100 @@ func commandsStartHandler(msg *tgbotapi.Message) {
 	log.Debugf("Say hello to %s", msg.From.String())
 }
 
+func commandsHelpHandler(msg *tgbotapi.Message) {
+	helpMsg :=
+		`Помощь по командам бота.
+/start - приветствие (стандартная для любого бота Telegram)
+/help - данная справка
+/ban @username - забанить пользователя в группе (бот должен иметь административные права в группе)
+/unban @username - разбанить пользователя в группе (бот должен иметь административные права в группе)
+/ping - шуточный пинг
+/yum [info provides repolist repoquery] - аналог системной команды
+/dnf [info provides repolist repoquery] - аналог системной команды
+`
+	sendMessage(msg.Chat.ID, helpMsg, 0)
+}
+
+func commandsPingHandler(msg *tgbotapi.Message) {
+	r := rand.New(rand.NewSource(int64(msg.From.ID)))
+	r.Seed(int64(msg.MessageID))
+
+	if r.Int()%12 == 0 {
+		sendMessage(msg.Chat.ID, "Request timed out 😜", msg.MessageID)
+		return
+	}
+	pingMsg := fmt.Sprintf("%s пинг от тебя %3.3f 😜", msg.From.String(), r.Float32())
+	sendMessage(msg.Chat.ID, pingMsg, msg.MessageID)
+}
+
 func commandsFloodHandler(msg *tgbotapi.Message) {
 	if !isMeAdmin(msg.Chat) {
 		sendMessage(msg.Chat.ID, "Бот не является администратором этого чата. Команда недоступна!", msg.MessageID)
 		log.Warn("Command `flood` in chat with bot not admin from %s", msg.From.String())
 		return
+	}
+
+	if msg.ReplyToMessage == nil {
+		sendMessage(msg.Chat.ID, "Напиши команду в ответ на сообщение-флуд, тогда сработает.", msg.MessageID)
+		return
+	}
+
+	if botUser, err := bot.GetMe(); err != nil {
+		log.Errorf("Unable to get bot user: %s", err)
+		return
+	} else if botUser.ID == msg.ReplyToMessage.From.ID {
+		sendMessage(msg.Chat.ID, fmt.Sprintf("Хорошая попытка %s 😜", msg.From.String()), msg.MessageID)
+		return
+	}
+
+	// chech himself
+	if msg.ReplyToMessage.From.ID == msg.From.ID {
+		sendMessage(msg.Chat.ID, "Самотык? 😜", msg.MessageID)
+		return
+	}
+
+	// check flood duration
+	if exists, d, err := cacheGet(msg.ReplyToMessage.From.ID, msg.From.ID); err != nil {
+		log.Errorf("Unable to get cache: %s")
+		return
+	} else if exists {
+		sendMessage(msg.Chat.ID, fmt.Sprintf("Ты недавно уже объявлял %s флудером. Подожди некоторое время: %s", msg.ReplyToMessage.From.String(), (options.CacheDuration-d).String()), msg.MessageID)
+		return
+	} else {
+		if err = cacheSet(msg.ReplyToMessage.From.ID, msg.From.ID); err != nil {
+			log.Errorf("Unable to set cache for flooder ID %d and user ID %d: %s", msg.ReplyToMessage.From.ID, msg.From.ID, err)
+		}
+	}
+
+	var (
+		level   int
+		err     error
+		apiResp tgbotapi.APIResponse
+	)
+
+	if level, err = dbAddFloodLevel(msg.ReplyToMessage.From.ID); err != nil {
+		log.Errorf("Unable to add flood level for %d: %s", msg.ReplyToMessage.From.ID, err)
+		return
+	}
+	if level >= options.MaximumFloodLevel {
+		config := tgbotapi.ChatMemberConfig{
+			ChatID:             msg.Chat.ID,
+			SuperGroupUsername: msg.Chat.UserName,
+			UserID:             msg.ReplyToMessage.From.ID,
+		}
+		if apiResp, err = bot.KickChatMember(config); err != nil {
+			if apiResp.Ok {
+				sendMessage(msg.Chat.ID, fmt.Sprintf("%s терпение туземцев этого чата по поводу твоего флуда кончилось. Мы изгоняем тебя!", msg.ReplyToMessage.From.String()), 0)
+			} else {
+				log.Warnf("Unable to ban flooder %s. API response with error: (%d) %s", msg.ReplyToMessage.From.String(), apiResp.ErrorCode, apiResp.Description)
+			}
+		}
+
+		if err = dbSetFloodLevel(msg.ReplyToMessage.From.ID, 0); err != nil {
+			log.Errorf("Unable to clear flood level for banned user: %s", err)
+		}
+	} else {
+		sendMessage(msg.Chat.ID, fmt.Sprintf("%s тебя назвали флудером, осталось попыток %d и будешь изгнан!", msg.ReplyToMessage.From.String(), options.MaximumFloodLevel-level), msg.ReplyToMessage.MessageID)
 	}
 }
 

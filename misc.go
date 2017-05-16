@@ -1,7 +1,7 @@
 // -*- Go -*-
 /* ------------------------------------------------ */
 /* Golang source                                    */
-/* Author: Алексей Панов <a.panov@maximatelecom.ru> */
+/* Author: Alexei Panov <me@elemc.name> 			*/
 /* ------------------------------------------------ */
 
 package main

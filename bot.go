@@ -1,7 +1,7 @@
 // -*- Go -*-
 /* ------------------------------------------------ */
 /* Golang source                                    */
-/* Author: Алексей Панов <a.panov@maximatelecom.ru> */
+/* Author: Alexei Panov <me@elemc.name>				*/
 /* ------------------------------------------------ */
 
 package main
@@ -314,8 +314,13 @@ func sendMessage(chatID int64, text string, replyID int) {
 		msg.ReplyToMessageID = replyID
 	}
 	if omsg, err = bot.Send(msg); err != nil {
-		log.Errorf("Unable to send message to %d with text [%s] and reply [%d]: %s", chatID, text, replyID, err)
-		return
+		// oops, try to send as plain text
+		log.Warnf("oops, unable to send markdown message [%s]: %s. Try to send as plain text.", text, err)
+		msg.ParseMode = ""
+		if omsg, err = bot.Send(msg); err != nil {
+			log.Errorf("Unable to send message to %d with text [%s] and reply [%d]: %s", chatID, text, replyID, err)
+			return
+		}
 	}
 
 	if err = saveMessage(&omsg); err != nil {
