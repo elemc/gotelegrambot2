@@ -22,7 +22,7 @@ func commandsMainHandler(msg *tgbotapi.Message) {
 	switch strings.ToLower(cmd) {
 	case "start":
 		go commandsStartHandler(msg)
-	case "ban":
+	case "ban", "unban":
 		go commandsBanHandler(msg)
 	case "dnf", "yum":
 		go commandsDNFHandler(msg)
@@ -50,22 +50,69 @@ func commandsFloodHandler(msg *tgbotapi.Message) {
 func commandsBanHandler(msg *tgbotapi.Message) {
 	if !msg.Chat.IsGroup() && !msg.Chat.IsSuperGroup() {
 		sendMessage(msg.Chat.ID, "Кого будем банить в привате? 😂", msg.MessageID)
-		log.Debugf("Command `ban` in private chat from %s", msg.From.String())
+		log.Debugf("Commands `ban` or `unban` in private chat from %s", msg.From.String())
 		return
 	}
 
 	if !isMeAdmin(msg.Chat) {
 		sendMessage(msg.Chat.ID, "Бот не является администратором этого чата. Команда недоступна!", msg.MessageID)
-		log.Warn("Command `ban` in chat with bot not admin from %s", msg.From.String())
+		log.Warn("Commands `ban` or `unban` in chat with bot not admin from %s", msg.From.String())
 		return
 	} else {
-		log.Debugf("Command `ban` in group or supergroup chat with bot admin from %s", msg.From.String())
+		log.Debugf("Commands `ban` or `unban` in group or supergroup chat with bot admin from %s", msg.From.String())
+	}
+
+	if !isUserAdmin(msg.Chat, msg.From) {
+		sendMessage(msg.Chat.ID, "Ты не админ в этом чате! Не имеешь право на баны/разбаны! 🤔\nПопытка управления реальностью записана в аналы, группа немедленного БАНения уже выехала за тобой!😉", msg.MessageID)
+		log.Warnf("Commands `ban` or `unban` run fails, user %s not admin in chat!", msg.From.String())
+		return
 	}
 
 	if msg.CommandArguments() == "" {
 		sendMessage(msg.Chat.ID, "Кого будем банить?", msg.MessageID)
 		log.Debugf("Command `ban` without arguments from %s", msg.From.String())
 		return
+	}
+
+	username := msg.CommandArguments()
+	var (
+		user    *tgbotapi.User
+		err     error
+		apiResp tgbotapi.APIResponse
+	)
+	if user, err = getUser(username); err != nil {
+		if err == ErrorUserNotFound {
+			sendMessage(msg.Chat.ID, fmt.Sprintf("Не нашли пользователя %s", username), msg.MessageID)
+			return
+		} else if strings.Contains(err.Error(), "Список:") {
+			sendMessage(msg.Chat.ID, fmt.Sprintf("Более одного пользователя попало в выборку. Попробуй с @username. \n%s", err), msg.MessageID)
+			return
+		}
+		log.Errorf("Unable to find user with name [%s]: %s", username, err)
+		return
+	}
+	log.Debugf("Found user [%+v]", *user)
+
+	config := tgbotapi.ChatMemberConfig{
+		ChatID:             msg.Chat.ID,
+		SuperGroupUsername: msg.Chat.UserName,
+		UserID:             user.ID,
+	}
+
+	if strings.ToLower(msg.Command()) == "ban" {
+		apiResp, err = bot.KickChatMember(config)
+	} else if strings.ToLower(msg.Command()) == "unban" {
+		apiResp, err = bot.UnbanChatMember(config)
+	}
+
+	if err != nil {
+		if apiResp.Ok || apiResp.ErrorCode == 0 {
+			sendMessage(msg.Chat.ID, "Сделано", msg.MessageID)
+			log.Debugf("Ban/Unban %s successful", user.String())
+		} else {
+			sendMessage(msg.Chat.ID, fmt.Sprintf("*Ошибка*: ``` код=%d, описание=%s ```", apiResp.ErrorCode, apiResp.Description), msg.MessageID)
+			log.Warnf("API response with error: (%d) %s", apiResp.ErrorCode, apiResp.Description)
+		}
 	}
 }
 

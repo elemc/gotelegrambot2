@@ -29,6 +29,8 @@ var (
 	bot        *tgbotapi.BotAPI
 	photoCache PhotoCache
 	filesCache FilesCacheMemory
+
+	ErrorUserNotFound = fmt.Errorf("user not found")
 )
 
 func botServe() (err error) {
@@ -327,8 +329,10 @@ func isUserAdmin(chat *tgbotapi.Chat, user *tgbotapi.User) bool {
 	}
 	var err error
 
-	config := tgbotapi.ChatConfig{}
-	config.ChatID = chat.ID
+	config := tgbotapi.ChatConfig{
+		ChatID:             chat.ID,
+		SuperGroupUsername: chat.UserName,
+	}
 
 	var admins []tgbotapi.ChatMember
 	if admins, err = bot.GetChatAdministrators(config); err != nil {

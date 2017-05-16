@@ -9,6 +9,7 @@ package main
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -145,6 +146,45 @@ func getUsers() (users []tgbotapi.User, err error) {
 		return
 	}
 	return
+}
+
+func getUser(name string) (user *tgbotapi.User, err error) {
+	if name == "" {
+		return nil, fmt.Errorf("user name is empty")
+	}
+	tuser := []tgbotapi.User{}
+	if name[0] == '@' {
+		name = name[1:]
+	}
+	if strings.Contains(name, " ") {
+		fl := strings.Split(name, " ")
+		first := fl[0]
+		last := fl[1]
+		if err = db.Model(&tuser).Where("first_name = ? AND last_name = ?", first, last).WhereOr("first_name = ? AND last_name = ?", last, first).Select(); err != nil {
+			if err == pg.ErrNoRows {
+				return nil, ErrorUserNotFound
+			}
+			return
+		}
+	} else {
+		if err = db.Model(&tuser).Where("first_name = ?", name).WhereOr("last_name = ?", name).WhereOr("user_name = ?", name).Select(); err != nil {
+			if err == pg.ErrNoRows {
+				return nil, ErrorUserNotFound
+			}
+			return
+		}
+	}
+	if len(tuser) > 1 {
+		var us []string
+		for _, u := range tuser {
+			us = append(us, fmt.Sprintf("@%s (%s %s)", u.UserName, u.FirstName, u.LastName))
+		}
+		text := fmt.Sprintf("``` Список: \n\t%s ```", strings.Join(us, "\n\t"))
+		log.Warn(text)
+		return nil, fmt.Errorf("%s", text)
+	}
+
+	return &tuser[0], nil
 }
 
 func getFileFromCache(fileID string) (file FileCache, err error) {
