@@ -335,8 +335,7 @@ func isUserAdmin(chat *tgbotapi.Chat, user *tgbotapi.User) bool {
 	var err error
 
 	config := tgbotapi.ChatConfig{
-		ChatID:             chat.ID,
-		SuperGroupUsername: chat.UserName,
+		ChatID: chat.ID,
 	}
 
 	var admins []tgbotapi.ChatMember
