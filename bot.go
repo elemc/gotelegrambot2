@@ -14,7 +14,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/go-pg/pg"
@@ -294,43 +293,17 @@ func sendMessage(chatID int64, text string, replyID int) {
 		err  error
 	)
 
-	mono := false
-	blockSize := 8196
-	if strings.HasPrefix(text, "```") {
-		blockSize = 4088
-		mono = true
-	}
-
+	blockSize := 4096
 	if len(text) > blockSize {
-		buf := strings.NewReader(strings.TrimPrefix(strings.TrimSuffix(text, "```"), "```"))
-		temp := make([]byte, blockSize)
-		var num uint64
-		for {
-			if num >= 9 {
-				sendMessage(chatID, "Ожидайте, достигнут лимит на количество одновременно отправленных сообщений!", replyID)
-				time.Sleep(time.Second * 300)
-				num = 0
-			}
-			rb, err := buf.Read(temp)
-			if err != nil && err != io.EOF {
-				log.Errorf("Unable to read data from buffer: %s", err)
-				break
-			}
-			if mono {
-				t := fmt.Sprintf("``` %s ```", temp)
-				if len(t) > blockSize {
-					log.Fatalf("Message to long: %d", len(t))
-				}
-				sendMessage(chatID, t, replyID)
-			} else {
-				sendMessage(chatID, string(temp), replyID)
-			}
-			num++
-			if err == io.EOF || rb <= 0 {
-				break
-			}
+		log.Debugf("Message to big, size %d, must be cut", len(text))
+		sendMessage(chatID, "* Сообщение слишком большое. Текст будет обрезан! *", replyID)
+		suffix := ""
+		if strings.HasPrefix(text, "```") {
+			blockSize = 4088
+			suffix = "```"
 		}
-		return
+		text = text[:blockSize]
+		text += suffix
 	}
 
 	msg := tgbotapi.NewMessage(chatID, text)

@@ -26,6 +26,8 @@ func commandsMainHandler(msg *tgbotapi.Message) {
 		go commandsBanHandler(msg)
 	case "dnf", "yum":
 		go commandsDNFHandler(msg)
+	case "flood":
+		go commandsFloodHandler(msg)
 	default:
 
 	}
@@ -35,6 +37,14 @@ func commandsStartHandler(msg *tgbotapi.Message) {
 	t := fmt.Sprintf("Привет %s!", msg.From.String())
 	sendMessage(msg.Chat.ID, t, msg.MessageID)
 	log.Debugf("Say hello to %s", msg.From.String())
+}
+
+func commandsFloodHandler(msg *tgbotapi.Message) {
+	if !isMeAdmin(msg.Chat) {
+		sendMessage(msg.Chat.ID, "Бот не является администратором этого чата. Команда недоступна!", msg.MessageID)
+		log.Warn("Command `flood` in chat with bot not admin from %s", msg.From.String())
+		return
+	}
 }
 
 func commandsBanHandler(msg *tgbotapi.Message) {
@@ -60,7 +70,10 @@ func commandsBanHandler(msg *tgbotapi.Message) {
 }
 
 func commandsDNFHandler(msg *tgbotapi.Message) {
-	var err error
+	var (
+		err    error
+		output []byte
+	)
 	args := strings.Replace(msg.CommandArguments(), "—", "--", -1)
 	if args == "" {
 		sendMessage(msg.Chat.ID, "Не знаю, что выполнять, ты же ничего не указал в аргументах", msg.MessageID)
@@ -70,25 +83,60 @@ func commandsDNFHandler(msg *tgbotapi.Message) {
 
 	arglist := strings.Split(args, " ")
 	if arglist[0] == "info" || arglist[0] == "provides" || arglist[0] == "repolist" || arglist[0] == "repoquery" {
-		if arglist[0] != "repolist" { //&& arglist[0] != "repoquery" {
+		if arglist[0] != "repolist" && arglist[0] != "repoquery" {
 			arglist = append(arglist, "-q")
 		}
 		cmd := exec.Command("/usr/bin/dnf", arglist...)
+		/*var (
+			stdout io.ReadCloser
+			stderr io.ReadCloser
+		)
+		if stdout, err = cmd.StdoutPipe(); err != nil {
+			log.Errorf("Unable to get stdout pipe: %s", err)
+			return
+		}
+		if stderr, err = cmd.StderrPipe(); err != nil {
+			log.Errorf("Unable to get stderr pipe: %s", err)
+			return
+		}
+
 		if err = cmd.Start(); err != nil {
-			log.Errorf("Unable to start command form %s: dnf %s: %s", msg.From.String(), strings.Join(arglist, " "), strings.Join(arglist, " "))
-			sendMessage(msg.Chat.ID, "Ой. Что-то пошло не так!", msg.MessageID)
+			log.Errorf("Unable to start command [dnf %s]: %s", strings.Join(arglist, " "), err)
 			return
 		}
+
+		var buf []byte
+		if _, err = stdout.Read(buf); err != nil {
+			log.Errorf("Unable to read stdout for command [dnf %s]: %s", strings.Join(arglist, " "), err)
+			return
+		}
+		if len(buf) > 0 {
+			output = append(output, buf...)
+		}
+		if _, err = stderr.Read(buf); err != nil {
+			log.Errorf("Unable to read stderr for command [dnf %s]: %s", strings.Join(arglist, " "), err)
+			return
+		}
+		if len(buf) > 0 {
+			output = append(output, buf...)
+		}
+
 		if err = cmd.Wait(); err != nil {
-			log.Errorf("Unable to wait command form %s: dnf %s: %s", msg.From.String(), strings.Join(arglist, " "), strings.Join(arglist, " "))
-			sendMessage(msg.Chat.ID, "Ой. Что-то пошло не так!", msg.MessageID)
+			log.Errorf("Unable to wait command [dnf %s]: %s", strings.Join(arglist, " "), err)
 			return
 		}
 
-		f, _ := cmd.StdoutPipe()
-		defer f.Close()
+		if len(output) > 0 {
+			sendMessage(msg.Chat.ID, fmt.Sprintf("``` %s ```", output), msg.MessageID)
+			log.Debugf("Run command from %s: dnf %s", msg.From.String(), strings.Join(arglist, " "))
+		} else {
+			sendMessage(msg.Chat.ID, "А нечего выводить, вывод пустой", msg.MessageID)
+			log.Warnf("Run command from %s: dnf %s with empty output", msg.From.String(), strings.Join(arglist, " "))
+		}*/
 
-		if output, err := cmd.CombinedOutput(); err != nil {
+		if output, err = cmd.CombinedOutput(); err != nil {
+			log.Errorf("Unable to run command form %s: dnf %s: %s", msg.From.String(), strings.Join(arglist, " "), strings.Join(arglist, " "))
+			sendMessage(msg.Chat.ID, "Ой. Что-то пошло не так!", msg.MessageID)
 		} else if len(output) == 0 {
 			sendMessage(msg.Chat.ID, "А нечего выводить, вывод пустой", msg.MessageID)
 			log.Warnf("Run command from %s: dnf %s with empty output", msg.From.String(), strings.Join(arglist, " "))
