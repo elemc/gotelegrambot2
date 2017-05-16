@@ -58,6 +58,9 @@ func commandsHelpHandler(msg *tgbotapi.Message) {
 /ping - шуточный пинг
 /yum [info provides repolist repoquery] - аналог системной команды
 /dnf [info provides repolist repoquery] - аналог системной команды
+/pid - в ответ на сообщение возвращает его ID
+/link - в ответ на сообщение возвращает ссылку, если чат публичный
+/flood - в ответ на сообщение меняет уровень флудера для пользователя
 `
 	sendMessage(msg.Chat.ID, helpMsg, 0)
 }

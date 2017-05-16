@@ -244,7 +244,7 @@ func getUserPhoto(user *tgbotapi.User) (err error) {
 
 	config := tgbotapi.NewUserProfilePhotos(user.ID)
 	if photos, err = bot.GetUserProfilePhotos(config); err != nil {
-		err = fmt.Errorf("Unable to get user profile photos for user with ID %d: %s", user.ID, user.String(), err)
+		err = fmt.Errorf("Unable to get user profile photos for user with ID %d: %s", user.ID, err)
 		return
 	}
 	if photos.TotalCount == 0 {
