@@ -33,6 +33,10 @@ func commandsMainHandler(msg *tgbotapi.Message) {
 		go commandsPingHandler(msg)
 	case "help":
 		go commandsHelpHandler(msg)
+	case "pid":
+		go commandsPIDHandler(msg)
+	case "link":
+		go commandsLinkHandler(msg)
 	default:
 
 	}
@@ -56,6 +60,28 @@ func commandsHelpHandler(msg *tgbotapi.Message) {
 /dnf [info provides repolist repoquery] - аналог системной команды
 `
 	sendMessage(msg.Chat.ID, helpMsg, 0)
+}
+
+func commandsLinkHandler(msg *tgbotapi.Message) {
+	if msg.ReplyToMessage == nil {
+		sendMessage(msg.Chat.ID, "Напиши команду в ответ на сообщение, тогда сработает.", msg.MessageID)
+		return
+	}
+	if len(msg.Chat.UserName) == 0 {
+		sendMessage(msg.Chat.ID, fmt.Sprintf("Это не публичный чат, ссылку получить невозможно. Message ID = *%d*", msg.ReplyToMessage.MessageID), msg.MessageID)
+		return
+	}
+
+	sendMessage(msg.Chat.ID, fmt.Sprintf("https://t.me/%s/%d", msg.Chat.UserName, msg.ReplyToMessage.MessageID), msg.MessageID)
+}
+
+func commandsPIDHandler(msg *tgbotapi.Message) {
+	if msg.ReplyToMessage == nil {
+		sendMessage(msg.Chat.ID, "Напиши команду в ответ на сообщение, тогда сработает.", msg.MessageID)
+		return
+	}
+
+	sendMessage(msg.Chat.ID, fmt.Sprintf("``` %d ```", msg.ReplyToMessage.MessageID), msg.MessageID)
 }
 
 func commandsPingHandler(msg *tgbotapi.Message) {
