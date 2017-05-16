@@ -49,7 +49,7 @@ func LoadConfig() (err error) {
 		StaticDirPath:     viper.GetString("main.static_path"),
 		MaximumFloodLevel: viper.GetInt("main.maximum_flood_level"),
 		CacheDuration:     viper.GetDuration("cache.duration"),
-		CacheUpdatePeriod: viper.GetDuration("cache.update_perido"),
+		CacheUpdatePeriod: viper.GetDuration("cache.update_period"),
 	}
 	return
 }
