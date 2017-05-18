@@ -28,8 +28,16 @@ type Flooder struct {
 	Level  int
 }
 
+type Feeder struct {
+	URL      string `sql:",pk"`
+	Name     string
+	LastGUID string
+}
+
 var (
-	db *pg.DB
+	db                     *pg.DB
+	ErrorFeedAlreadyExists = fmt.Errorf("feed already exists in database")
+	ErrorFeedNotFound      = fmt.Errorf("feed not found in database")
 )
 
 func InitDatabase() (err error) {
@@ -83,6 +91,7 @@ func createTables() (err error) {
 		&FileCache{},
 		&Flooder{},
 		&Cache{},
+		&Feeder{},
 	}
 
 	for _, t := range tables {
@@ -262,5 +271,35 @@ func dbGetFloodLevel(userID int) (level int, err error) {
 	}
 
 	level = flooder.Level
+	return
+}
+
+func dbAddFeed(url string, name string) (err error) {
+	if _, err = dbGetFeed(url); err != nil && err != pg.ErrNoRows {
+		return
+	}
+	err = db.Insert(&Feeder{URL: url, Name: name})
+	return
+}
+
+func dbGetFeed(url string) (feed Feeder, err error) {
+	feed.URL = url
+	err = db.Select(&feed)
+	return
+}
+
+func dbDelFeed(url string) (err error) {
+	var feed Feeder
+	if feed, err = dbGetFeed(url); err != nil && err != pg.ErrNoRows {
+		return
+	} else if err == pg.ErrNoRows {
+		return ErrorFeedNotFound
+	}
+	err = db.Delete(&feed)
+	return
+}
+
+func dbGetAllFeeds() (feeds []Feeder, err error) {
+	err = db.Model(&feeds).Select()
 	return
 }

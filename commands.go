@@ -37,8 +37,13 @@ func commandsMainHandler(msg *tgbotapi.Message) {
 		go commandsPIDHandler(msg)
 	case "link":
 		go commandsLinkHandler(msg)
+	case "add_feed":
+		go commandsAddFeed(msg)
+	case "del_feed":
+		go commandsDelFeed(msg)
+	case "show_feeds":
+		go commandsShowFeeds(msg)
 	default:
-
 	}
 }
 
@@ -257,53 +262,6 @@ func commandsDNFHandler(msg *tgbotapi.Message) {
 			arglist = append(arglist, "-q")
 		}
 		cmd := exec.Command("/usr/bin/dnf", arglist...)
-		/*var (
-			stdout io.ReadCloser
-			stderr io.ReadCloser
-		)
-		if stdout, err = cmd.StdoutPipe(); err != nil {
-			log.Errorf("Unable to get stdout pipe: %s", err)
-			return
-		}
-		if stderr, err = cmd.StderrPipe(); err != nil {
-			log.Errorf("Unable to get stderr pipe: %s", err)
-			return
-		}
-
-		if err = cmd.Start(); err != nil {
-			log.Errorf("Unable to start command [dnf %s]: %s", strings.Join(arglist, " "), err)
-			return
-		}
-
-		var buf []byte
-		if _, err = stdout.Read(buf); err != nil {
-			log.Errorf("Unable to read stdout for command [dnf %s]: %s", strings.Join(arglist, " "), err)
-			return
-		}
-		if len(buf) > 0 {
-			output = append(output, buf...)
-		}
-		if _, err = stderr.Read(buf); err != nil {
-			log.Errorf("Unable to read stderr for command [dnf %s]: %s", strings.Join(arglist, " "), err)
-			return
-		}
-		if len(buf) > 0 {
-			output = append(output, buf...)
-		}
-
-		if err = cmd.Wait(); err != nil {
-			log.Errorf("Unable to wait command [dnf %s]: %s", strings.Join(arglist, " "), err)
-			return
-		}
-
-		if len(output) > 0 {
-			sendMessage(msg.Chat.ID, fmt.Sprintf("``` %s ```", output), msg.MessageID)
-			log.Debugf("Run command from %s: dnf %s", msg.From.String(), strings.Join(arglist, " "))
-		} else {
-			sendMessage(msg.Chat.ID, "А нечего выводить, вывод пустой", msg.MessageID)
-			log.Warnf("Run command from %s: dnf %s with empty output", msg.From.String(), strings.Join(arglist, " "))
-		}*/
-
 		if output, err = cmd.CombinedOutput(); err != nil {
 			log.Errorf("Unable to run command form %s: dnf %s: %s", msg.From.String(), strings.Join(arglist, " "), strings.Join(arglist, " "))
 			sendMessage(msg.Chat.ID, "Ой. Что-то пошло не так!", msg.MessageID)
@@ -315,4 +273,57 @@ func commandsDNFHandler(msg *tgbotapi.Message) {
 			log.Debugf("Run command from %s: dnf %s", msg.From.String(), strings.Join(arglist, " "))
 		}
 	}
+}
+
+func commandsAddFeed(msg *tgbotapi.Message) {
+	if msg.CommandArguments() == "" {
+		sendMessage(msg.Chat.ID, "Задай аргумент - ссылку на RSS/ATOM", msg.MessageID)
+		log.Debugf("Command add_pulse without arguments from %s", msg.From.String())
+		return
+	}
+
+	if err := feedAdd(msg.CommandArguments()); err != nil {
+		log.Warnf("Unable to add feed [%s]: %s", msg.CommandArguments(), err)
+		sendMessage(msg.Chat.ID, "Что-то пошло не так, может ты с URL накосячил?", msg.MessageID)
+		return
+	}
+
+	sendMessage(msg.Chat.ID, "Добавил источник в пульс.", msg.MessageID)
+}
+
+func commandsDelFeed(msg *tgbotapi.Message) {
+	if msg.CommandArguments() == "" {
+		sendMessage(msg.Chat.ID, "Задай аргумент - ссылку на RSS/ATOM", msg.MessageID)
+		log.Debugf("Command del_pulse without arguments from %s", msg.From.String())
+		return
+	}
+
+	if err := feedDel(msg.CommandArguments()); err != nil && err != ErrorFeedNotFound {
+		log.Warnf("Unable to add feed [%s]: %s", msg.CommandArguments(), err)
+		sendMessage(msg.Chat.ID, "Что-то пошло не так, может ты с URL накосячил?", msg.MessageID)
+		return
+	} else if err == ErrorFeedNotFound {
+		sendMessage(msg.Chat.ID, "Такого источника у меня не записано. Нечего удалять.", msg.MessageID)
+		return
+	}
+
+	sendMessage(msg.Chat.ID, "Удалил источник из пульса.", msg.MessageID)
+}
+
+func commandsShowFeeds(msg *tgbotapi.Message) {
+	var (
+		feeds []Feeder
+		err   error
+		urls  []string
+	)
+	if feeds, err = dbGetAllFeeds(); err != nil {
+		log.Errorf("Unable to get all feeds from database: %s", err)
+		return
+	}
+
+	for _, feed := range feeds {
+		urls = append(urls, fmt.Sprintf("[%s](%s)", feed.Name, feed.URL))
+	}
+
+	sendMessage(msg.Chat.ID, fmt.Sprintf("Источники: \n%s", strings.Join(urls, "\n")), 0)
 }
