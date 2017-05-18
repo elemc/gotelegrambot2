@@ -29,9 +29,19 @@ type Flooder struct {
 }
 
 type Feeder struct {
-	URL      string `sql:",pk"`
-	Name     string
-	LastGUID string
+	URL  string `sql:",pk"`
+	Name string
+}
+
+type FeedNews struct {
+	URL         string `sql:",pk"`
+	GUID        string `sql:",pk"`
+	Title       string
+	Link        string
+	ImageURL    string
+	ImageTitle  string
+	Description string
+	FeedTitle   string
 }
 
 var (
@@ -92,6 +102,7 @@ func createTables() (err error) {
 		&Flooder{},
 		&Cache{},
 		&Feeder{},
+		&FeedNews{},
 	}
 
 	for _, t := range tables {
@@ -301,5 +312,19 @@ func dbDelFeed(url string) (err error) {
 
 func dbGetAllFeeds() (feeds []Feeder, err error) {
 	err = db.Model(&feeds).Select()
+	return
+}
+
+func dbNewsFound(news FeedNews) bool {
+	if err := db.Select(&news); err != nil && err != pg.ErrNoRows {
+		log.Errorf("Unable to get feed news with URL=%s and GUID=%s: %s", news.URL, news.GUID, err)
+	} else if err == pg.ErrNoRows {
+		return false
+	}
+	return true
+}
+
+func dbNewsAdd(news FeedNews) (err error) {
+	err = db.Insert(&news)
 	return
 }

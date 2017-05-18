@@ -24,6 +24,8 @@ type Options struct {
 
 	CacheDuration     time.Duration
 	CacheUpdatePeriod time.Duration
+
+	FeedsUpdatePeriod time.Duration
 }
 
 var options *Options
@@ -50,6 +52,7 @@ func LoadConfig() (err error) {
 		MaximumFloodLevel: viper.GetInt("main.maximum_flood_level"),
 		CacheDuration:     viper.GetDuration("cache.duration"),
 		CacheUpdatePeriod: viper.GetDuration("cache.update_period"),
+		FeedsUpdatePeriod: viper.GetDuration("feeds.update_period"),
 	}
 	return
 }

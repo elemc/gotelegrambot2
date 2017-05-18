@@ -56,6 +56,8 @@ func main() {
 			log.Errorf("Unable to serve HTTP server: %s", err)
 		}
 	}()
+	wg.Add(1)
+	go updateFeeds()
 
 	wg.Wait()
 }

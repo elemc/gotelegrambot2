@@ -365,6 +365,26 @@ func isMeAdmin(chat *tgbotapi.Chat) bool {
 	return isUserAdmin(chat, &me)
 }
 
-func getChatMember(chat *tgbotapi.Chat, user *tgbotapi.User) {
+func sendMessageToAllChats(text string) {
+	if text == "" {
+		log.Warn("Unable to send empty message to all chats!")
+		return
+	}
 
+	var (
+		chats []tgbotapi.Chat
+		err   error
+	)
+	if chats, err = getChats(); err != nil {
+		log.Errorf("Unable to get all chats in sending message [%s] to all chats: %s", text, err)
+		return
+	}
+
+	for _, chat := range chats {
+		if !chat.IsGroup() && !chat.IsSuperGroup() { // skip channels, private and other chats
+			continue
+		}
+
+		go sendMessage(chat.ID, text, 0)
+	}
 }
