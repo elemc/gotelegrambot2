@@ -381,7 +381,7 @@ func commandsDelInsult(msg *tgbotapi.Message, isWord bool) {
 			if !isWord {
 				part = "Такая цель"
 			}
-			sendMessage(msg.Chat.ID, fmt.Sprintf("%s отсутствует в базе", part), msg.MessageID)
+			sendMessage(msg.Chat.ID, fmt.Sprintf("%s (%s) отсутствует в базе", part, word), msg.MessageID)
 			log.Errorf("Unable to add insult word or target %s: %s", word, err)
 			return
 		}
