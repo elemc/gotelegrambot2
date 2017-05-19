@@ -340,22 +340,25 @@ func commandsShowFeeds(msg *tgbotapi.Message) {
 
 func commandsAddInsult(msg *tgbotapi.Message, isWord bool) {
 	if msg.CommandArguments() == "" {
-		sendMessage(msg.Chat.ID, "Задай аргумент - слово", msg.MessageID)
+		sendMessage(msg.Chat.ID, "Задай аргумент(ы) - слово или слова", msg.MessageID)
 		log.Debugf("Command add_insult without arguments from %s", msg.From.String())
 		return
 	}
 
-	if err := dbInsultAddWordOrTarget(msg.CommandArguments(), isWord); err != nil && err != ErrorWordAlreadyExists {
-		log.Errorf("Unable to add insult word or target %s: %s", msg.CommandArguments(), err)
-		return
-	} else if err == ErrorWordAlreadyExists {
-		part := "Такое слово"
-		if !isWord {
-			part = "Такая цель"
+	words := strings.Split(msg.CommandArguments(), " ")
+	for _, word := range words {
+		if err := dbInsultAddWordOrTarget(word, isWord); err != nil && err != ErrorWordAlreadyExists {
+			log.Errorf("Unable to add insult word or target %s: %s", word, err)
+			continue
+		} else if err == ErrorWordAlreadyExists {
+			part := "Такое слово"
+			if !isWord {
+				part = "Такая цель"
+			}
+			sendMessage(msg.Chat.ID, fmt.Sprintf("%s (%s) уже существует", part, word), msg.MessageID)
+			log.Errorf("Unable to add insult word or target %s: %s", word, err)
+			continue
 		}
-		sendMessage(msg.Chat.ID, fmt.Sprintf("%s уже существует", part), msg.MessageID)
-		log.Errorf("Unable to add insult word or target %s: %s", msg.CommandArguments(), err)
-		return
 	}
 
 	sendMessage(msg.Chat.ID, fmt.Sprintf("Добавил"), msg.MessageID)
@@ -363,24 +366,26 @@ func commandsAddInsult(msg *tgbotapi.Message, isWord bool) {
 
 func commandsDelInsult(msg *tgbotapi.Message, isWord bool) {
 	if msg.CommandArguments() == "" {
-		sendMessage(msg.Chat.ID, "Задай аргумент - слово", msg.MessageID)
+		sendMessage(msg.Chat.ID, "Задай аргумент(ы) - слово или слова", msg.MessageID)
 		log.Debugf("Command del_insult without arguments from %s", msg.From.String())
 		return
 	}
+	words := strings.Split(msg.CommandArguments(), " ")
+	for _, word := range words {
 
-	if err := dbInsultDelWordOrTarget(msg.CommandArguments(), isWord); err != nil && err != ErrorWordAlreadyExists {
-		log.Errorf("Unable to del insult word or target %s: %s", msg.CommandArguments(), err)
-		return
-	} else if err == ErrorWordNotFound {
-		part := "Такое слово"
-		if !isWord {
-			part = "Такая цель"
+		if err := dbInsultDelWordOrTarget(word, isWord); err != nil && err != ErrorWordAlreadyExists {
+			log.Errorf("Unable to del insult word or target %s: %s", word, err)
+			return
+		} else if err == ErrorWordNotFound {
+			part := "Такое слово"
+			if !isWord {
+				part = "Такая цель"
+			}
+			sendMessage(msg.Chat.ID, fmt.Sprintf("%s отсутствует в базе", part), msg.MessageID)
+			log.Errorf("Unable to add insult word or target %s: %s", word, err)
+			return
 		}
-		sendMessage(msg.Chat.ID, fmt.Sprintf("%s отсутствует в базе", part), msg.MessageID)
-		log.Errorf("Unable to add insult word or target %s: %s", msg.CommandArguments(), err)
-		return
 	}
-
 	sendMessage(msg.Chat.ID, fmt.Sprintf("Удалил"), msg.MessageID)
 }
 
