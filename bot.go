@@ -417,7 +417,7 @@ func insultMessage(msg *tgbotapi.Message) {
 			}
 			random := r.Int63n(int64(len(words)))
 			sendMessage(msg.Chat.ID, fmt.Sprintf("%s - %s", target, words[random]), msg.MessageID)
-			log.Debugf("Found %s in message. Answer %s - %s.", target, words[random])
+			log.Debugf("Found %s in message. Answer %s - %s.", target, target, words[random])
 			break
 		}
 	}
