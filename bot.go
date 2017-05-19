@@ -9,11 +9,13 @@ package main
 import (
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/go-pg/pg"
@@ -62,12 +64,14 @@ func botServe() (err error) {
 		if update.Message == nil {
 			continue
 		}
-		log.Debugf("new update: %+v", *update.Message)
 		go func() {
 			if err = saveMessage(update.Message); err != nil {
 				log.Errorf("Unable to save message: %s", err)
 			}
 		}()
+
+		// Insult
+		go insultMessage(update.Message)
 
 		// command handler
 		if update.Message.Command() != "" {
@@ -386,5 +390,35 @@ func sendMessageToAllChats(text string) {
 		}
 
 		go sendMessage(chat.ID, text, 0)
+	}
+}
+
+func insultMessage(msg *tgbotapi.Message) {
+	var (
+		targets []string
+		words   []string
+		err     error
+	)
+	if targets, err = dbInsultGetWordsOrTargets(false); err != nil {
+		log.Errorf("Unable to get insult targets: %s", err)
+		return
+	}
+	if words, err = dbInsultGetWordsOrTargets(true); err != nil {
+		log.Errorf("Unable to get insult words: %s", err)
+		return
+	}
+
+	for _, target := range targets {
+		if strings.Contains(strings.ToLower(msg.Text), strings.ToLower(target)) {
+			r := rand.New(rand.NewSource(time.Now().UnixNano()))
+			if r.Intn(4) == 0 {
+				log.Debugf("Found %s in message. Skip it randomly.", target)
+				break
+			}
+			random := r.Int63n(int64(len(words)))
+			sendMessage(msg.Chat.ID, fmt.Sprintf("%s - %s", target, words[random]), msg.MessageID)
+			log.Debugf("Found %s in message. Answer %s - %s.", target, words[random])
+			break
+		}
 	}
 }

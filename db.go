@@ -44,10 +44,17 @@ type FeedNews struct {
 	FeedTitle   string
 }
 
+type InsultWord struct {
+	Word   string `sql:",pk"`
+	IsWord bool
+}
+
 var (
 	db                     *pg.DB
 	ErrorFeedAlreadyExists = fmt.Errorf("feed already exists in database")
+	ErrorWordAlreadyExists = fmt.Errorf("insult word or target already exists in database")
 	ErrorFeedNotFound      = fmt.Errorf("feed not found in database")
+	ErrorWordNotFound      = fmt.Errorf("insult word or target not found in database")
 )
 
 func InitDatabase() (err error) {
@@ -103,6 +110,7 @@ func createTables() (err error) {
 		&Cache{},
 		&Feeder{},
 		&FeedNews{},
+		&InsultWord{},
 	}
 
 	for _, t := range tables {
@@ -326,5 +334,45 @@ func dbNewsFound(news FeedNews) bool {
 
 func dbNewsAdd(news FeedNews) (err error) {
 	err = db.Insert(&news)
+	return
+}
+
+func dbInsultFoundWordOrTarget(word string, isWord bool) bool {
+	t := &InsultWord{Word: word, IsWord: isWord}
+	if err := db.Select(t); err != nil && err == pg.ErrNoRows {
+		return false
+	}
+	return true
+}
+
+func dbInsultAddWordOrTarget(word string, isWord bool) (err error) {
+	if dbInsultFoundWordOrTarget(word, isWord) {
+		return ErrorWordAlreadyExists
+	}
+	err = db.Insert(&InsultWord{Word: word, IsWord: isWord})
+
+	return
+}
+
+func dbInsultGetWordsOrTargets(isWord bool) (list []string, err error) {
+	var words []InsultWord
+	if err = db.Model(&words).Select(); err != nil {
+		return
+	}
+	for _, word := range words {
+		if word.IsWord != isWord {
+			continue
+		}
+		list = append(list, word.Word)
+	}
+	return
+}
+
+func dbInsultDelWordOrTarget(word string, isWord bool) (err error) {
+	if !dbInsultFoundWordOrTarget(word, isWord) {
+		return ErrorWordNotFound
+	}
+
+	err = db.Delete(&InsultWord{Word: word, IsWord: isWord})
 	return
 }

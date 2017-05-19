@@ -43,6 +43,16 @@ func commandsMainHandler(msg *tgbotapi.Message) {
 		go commandsDelFeed(msg)
 	case "show_feeds":
 		go commandsShowFeeds(msg)
+	case "add_insult_word":
+		go commandsAddInsult(msg, true)
+	case "add_insult_target":
+		go commandsAddInsult(msg, false)
+	case "del_insult_word":
+		go commandsDelInsult(msg, true)
+	case "del_insult_target":
+		go commandsDelInsult(msg, false)
+	case "show_insult":
+		go commandsShowInsult(msg)
 	default:
 	}
 }
@@ -326,4 +336,74 @@ func commandsShowFeeds(msg *tgbotapi.Message) {
 	}
 
 	sendMessage(msg.Chat.ID, fmt.Sprintf("Источники: \n%s", strings.Join(urls, "\n")), 0)
+}
+
+func commandsAddInsult(msg *tgbotapi.Message, isWord bool) {
+	if msg.CommandArguments() == "" {
+		sendMessage(msg.Chat.ID, "Задай аргумент - слово", msg.MessageID)
+		log.Debugf("Command add_insult without arguments from %s", msg.From.String())
+		return
+	}
+
+	if err := dbInsultAddWordOrTarget(msg.CommandArguments(), isWord); err != nil && err != ErrorWordAlreadyExists {
+		log.Errorf("Unable to add insult word or target %s: %s", msg.CommandArguments(), err)
+		return
+	} else if err == ErrorWordAlreadyExists {
+		part := "Такое слово"
+		if !isWord {
+			part = "Такая цель"
+		}
+		sendMessage(msg.Chat.ID, fmt.Sprintf("%s уже существует", part), msg.MessageID)
+		log.Errorf("Unable to add insult word or target %s: %s", msg.CommandArguments(), err)
+		return
+	}
+
+	sendMessage(msg.Chat.ID, fmt.Sprintf("Добавил"), msg.MessageID)
+}
+
+func commandsDelInsult(msg *tgbotapi.Message, isWord bool) {
+	if msg.CommandArguments() == "" {
+		sendMessage(msg.Chat.ID, "Задай аргумент - слово", msg.MessageID)
+		log.Debugf("Command del_insult without arguments from %s", msg.From.String())
+		return
+	}
+
+	if err := dbInsultDelWordOrTarget(msg.CommandArguments(), isWord); err != nil && err != ErrorWordAlreadyExists {
+		log.Errorf("Unable to del insult word or target %s: %s", msg.CommandArguments(), err)
+		return
+	} else if err == ErrorWordNotFound {
+		part := "Такое слово"
+		if !isWord {
+			part = "Такая цель"
+		}
+		sendMessage(msg.Chat.ID, fmt.Sprintf("%s отсутствует в базе", part), msg.MessageID)
+		log.Errorf("Unable to add insult word or target %s: %s", msg.CommandArguments(), err)
+		return
+	}
+
+	sendMessage(msg.Chat.ID, fmt.Sprintf("Удалил"), msg.MessageID)
+}
+
+func commandsShowInsult(msg *tgbotapi.Message) {
+	var (
+		words []string
+		err   error
+	)
+	if words, err = dbInsultGetWordsOrTargets(false); err != nil {
+		log.Errorf("Unable to get insult targets: %s", err)
+		return
+	}
+
+	if len(words) > 0 {
+		sendMessage(msg.Chat.ID, fmt.Sprintf("*Цели*:\n%s", strings.Join(words, "\n")), 0)
+	}
+
+	if words, err = dbInsultGetWordsOrTargets(true); err != nil {
+		log.Errorf("Unable to get insult words: %s", err)
+		return
+	}
+
+	if len(words) > 0 {
+		sendMessage(msg.Chat.ID, fmt.Sprintf("*Оскорбления*:\n%s", strings.Join(words, "\n")), 0)
+	}
 }
