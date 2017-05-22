@@ -358,7 +358,7 @@ func httpDayHandler(ctx *fasthttp.RequestCtx) {
 		messageText := html.EscapeString(msg.Text)
 		re := regexp.MustCompile(`(http|ftp|https):\/\/([\w\-_]+(?:(?:\.[\w\-_]+)+))([\w\-\.,@?^=%&amp;:/~\+#]*[\w\-\@?^=%&amp;/~\+#])?`)
 		messageText = re.ReplaceAllString(messageText, `<a href="$0">$0</a>`)
-		messageText = strings.Replace(messageText, "\n", "<br/>")
+		messageText = strings.Replace(messageText, "\n", "<br/>", 0)
 
 		if msg.ReplyToMessage != nil {
 			lt := time.Unix(int64(msg.ReplyToMessage.Date), 0)
