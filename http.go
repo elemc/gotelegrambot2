@@ -353,13 +353,12 @@ func httpDayHandler(ctx *fasthttp.RequestCtx) {
 
 	var data []string
 	for _, msg := range msgs {
-		//bt := time.Now().UnixNano()
-
 		messageTime := time.Unix(int64(msg.Date), 0).Format("15:04:05")
 		user := msg.UserFrom.String()
 		messageText := html.EscapeString(msg.Text)
 		re := regexp.MustCompile(`(http|ftp|https):\/\/([\w\-_]+(?:(?:\.[\w\-_]+)+))([\w\-\.,@?^=%&amp;:/~\+#]*[\w\-\@?^=%&amp;/~\+#])?`)
 		messageText = re.ReplaceAllString(messageText, `<a href="$0">$0</a>`)
+		messageText = strings.Replace(messageText, "\n", "<br/>")
 
 		if msg.ReplyToMessage != nil {
 			lt := time.Unix(int64(msg.ReplyToMessage.Date), 0)
@@ -401,8 +400,6 @@ func httpDayHandler(ctx *fasthttp.RequestCtx) {
 		<td><strong>%s</strong></td>
 		<td>%s</td>
 	<tr>`, photoTD, messageTime, messageTime, messageTime, html.EscapeString(user), messageText)))
-		//et := time.Now().UnixNano()
-		//log.Debugf("Duration: %d", et-bt)
 	}
 	ctx.WriteString(strings.Join(data, "\n"))
 
