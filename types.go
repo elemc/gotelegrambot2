@@ -13,6 +13,7 @@ import (
 	"gopkg.in/telegram-bot-api.v4"
 )
 
+// Message is a type from tgbotapi with little changes for store messages in database
 type Message struct {
 	MessageID             int                       `json:"message_id"`
 	UserFrom              *tgbotapi.User            `json:"from"` // optional
@@ -48,6 +49,7 @@ type Message struct {
 	PinnedMessage         *Message                  `json:"pinned_message"`          // optional
 }
 
+// Chat is a type from tgbotapi with little changes for store chats in database
 type Chat struct {
 	ID        int64  `json:"id"`
 	Type      string `json:"type"`
@@ -61,15 +63,18 @@ func convertMessage(m *tgbotapi.Message) (msg *Message) {
 	if m == nil {
 		return nil
 	}
-	if data, err := json.Marshal(m); err != nil {
+	var (
+		data []byte
+		err  error
+	)
+	if data, err = json.Marshal(m); err != nil {
 		log.Errorf("Unable to marshal bot message [%+v]: %s", *m, err)
 		return nil
-	} else {
-		msg = new(Message)
-		if err = json.Unmarshal(data, msg); err != nil {
-			log.Errorf("Unable to unmarshal bot message [%s]: %s", data, err)
-			return nil
-		}
+	}
+	msg = new(Message)
+	if err = json.Unmarshal(data, msg); err != nil {
+		log.Errorf("Unable to unmarshal bot message [%s]: %s", data, err)
+		return nil
 	}
 	return
 }

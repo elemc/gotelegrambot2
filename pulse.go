@@ -18,6 +18,7 @@ import (
 	"github.com/mmcdole/gofeed"
 )
 
+// FeedLocks is a type for locking feeders
 type FeedLocks struct {
 	locks map[string]bool
 	mutex sync.Mutex
@@ -52,7 +53,7 @@ func updateFeeds() {
 	for {
 		time.Sleep(options.FeedsUpdatePeriod)
 		if feeds, err = dbGetAllFeeds(); err != nil {
-			log.Errorf("Unable to get all feeds: %s")
+			log.Errorf("Unable to get all feeds: %s", err)
 			continue
 		}
 		for _, feed := range feeds {
@@ -144,7 +145,7 @@ func (fn *FeedNews) String() string {
 
 	var buf bytes.Buffer
 	if err = tmpl.Execute(&buf, fn); err != nil {
-		log.Errorf("Unable to execute template: %s")
+		log.Errorf("Unable to execute template: %s", err)
 	}
 
 	text := buf.String()
@@ -155,14 +156,14 @@ func (fn *FeedNews) String() string {
 	return text
 }
 
-func (fl *FeedLocks) getFeedLock(feed Feeder) bool {
+func (fl *FeedLocks) getFeedLock(feed Feeder) (result bool) {
 	fl.mutex.Lock()
 	defer fl.mutex.Unlock()
-	if result, ok := fl.locks[feed.URL]; !ok {
+	var ok bool
+	if result, ok = fl.locks[feed.URL]; !ok {
 		return false
-	} else {
-		return result
 	}
+	return
 }
 
 func (fl *FeedLocks) lockUnlockFeeder(feed Feeder, lock bool) {

@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Options is a type for store all application options
 type Options struct {
 	APIKey            string
 	PgSQLDSN          string
@@ -30,6 +31,7 @@ type Options struct {
 
 var options *Options
 
+// LoadConfig function loads configuration file and set options
 func LoadConfig() (err error) {
 	log.Warnf("Load configuration file...")
 

@@ -22,6 +22,7 @@ import (
 	"gopkg.in/telegram-bot-api.v4"
 )
 
+// PhotoCache is a struct for store thread-safe caches
 type PhotoCache struct {
 	cache map[int]string
 	mutex sync.RWMutex
@@ -32,6 +33,7 @@ var (
 	photoCache PhotoCache
 	filesCache FilesCacheMemory
 
+	// ErrorUserNotFound generic error for user is not found
 	ErrorUserNotFound = fmt.Errorf("user not found")
 )
 
@@ -187,7 +189,7 @@ func getShortFileName(fileID string) (filename string) {
 
 func getFileName(fileID string) (filename string, err error) {
 	if filename = getShortFileName(fileID); filename == "" {
-		err = fmt.Errorf("Unable to get file name for file ID %d", fileID)
+		err = fmt.Errorf("unable to get file name for file ID %s", fileID)
 		return
 	}
 	filename = filepath.Join(options.StaticDirPath, filename)
@@ -256,7 +258,7 @@ func getUserPhoto(user *tgbotapi.User) (err error) {
 	}
 
 	if link, err = bot.GetFileDirectURL(photos.Photos[0][0].FileID); err != nil {
-		err = fmt.Errorf("Unable to get file direct URL for file ID %d", photos.Photos[0][0].FileID)
+		err = fmt.Errorf("unable to get file direct URL for file ID %s", photos.Photos[0][0].FileID)
 		return
 	}
 
@@ -283,12 +285,12 @@ func updatePhotoCache() {
 	}
 
 	for _, user := range users {
-		go func() {
+		go func(user tgbotapi.User) {
 			if err = getUserPhoto(&user); err != nil {
 				log.Errorf("Unable to get user photo: %s", err)
 				return
 			}
-		}()
+		}(user)
 	}
 	log.Debugf("Finish update photo cache.")
 }

@@ -18,21 +18,25 @@ import (
 	"gopkg.in/telegram-bot-api.v4"
 )
 
+// FileCache type for store file cache in database
 type FileCache struct {
 	FileID   string `sql:",pk"`
 	FileName string
 }
 
+// Flooder type for store flood level in database
 type Flooder struct {
 	UserID int `sql:",pk"`
 	Level  int
 }
 
+// Feeder type for store RSS/Atom feeds in database
 type Feeder struct {
 	URL  string `sql:",pk"`
 	Name string
 }
 
+// FeedNews type for store news from feeds in database
 type FeedNews struct {
 	URL         string `sql:",pk"`
 	GUID        string `sql:",pk"`
@@ -44,19 +48,29 @@ type FeedNews struct {
 	FeedTitle   string
 }
 
+// InsultWord type for store insult target and words in database
 type InsultWord struct {
 	Word   string `sql:",pk"`
 	IsWord bool
 }
 
 var (
-	db                     *pg.DB
+	db *pg.DB
+
+	// ErrorFeedAlreadyExists is a generic error for feed already exists in database message
 	ErrorFeedAlreadyExists = fmt.Errorf("feed already exists in database")
+
+	// ErrorWordAlreadyExists is a generic error for insult word or target already exists in database message
 	ErrorWordAlreadyExists = fmt.Errorf("insult word or target already exists in database")
-	ErrorFeedNotFound      = fmt.Errorf("feed not found in database")
-	ErrorWordNotFound      = fmt.Errorf("insult word or target not found in database")
+
+	// ErrorFeedNotFound is a generic error for a feed not found in database message
+	ErrorFeedNotFound = fmt.Errorf("feed not found in database")
+
+	// ErrorWordNotFound is a generic error for a insult word or target not found in database message
+	ErrorWordNotFound = fmt.Errorf("insult word or target not found in database")
 )
 
+// InitDatabase function for initialize pgsql database
 func InitDatabase() (err error) {
 	var pgo *pg.Options
 
@@ -273,7 +287,7 @@ func dbAddFloodLevel(userID int) (currentLevel int, err error) {
 		return 1, nil
 	}
 
-	flooder.Level += 1
+	flooder.Level++
 	if err = db.Update(&flooder); err != nil {
 		return
 	}

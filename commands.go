@@ -142,7 +142,7 @@ func commandsFloodHandler(msg *tgbotapi.Message) {
 
 	// check flood duration
 	if exists, d, err := cacheGet(msg.ReplyToMessage.From.ID, msg.From.ID); err != nil {
-		log.Errorf("Unable to get cache: %s")
+		log.Errorf("Unable to get cache: %s", err)
 		return
 	} else if exists {
 		sendMessage(msg.Chat.ID, fmt.Sprintf("Ты недавно уже объявлял %s флудером. Подожди некоторое время: %s", msg.ReplyToMessage.From.String(), (options.CacheDuration-d).String()), msg.MessageID)
@@ -196,9 +196,9 @@ func commandsBanHandler(msg *tgbotapi.Message) {
 		sendMessage(msg.Chat.ID, "Бот не является администратором этого чата. Команда недоступна!", msg.MessageID)
 		log.Warn("Commands `ban` or `unban` in chat with bot not admin from %s", msg.From.String())
 		return
-	} else {
-		log.Debugf("Commands `ban` or `unban` in group or supergroup chat with bot admin from %s", msg.From.String())
 	}
+
+	log.Debugf("Commands `ban` or `unban` in group or supergroup chat with bot admin from %s", msg.From.String())
 
 	if !isUserAdmin(msg.Chat, msg.From) {
 		sendMessage(msg.Chat.ID, "Ты не админ в этом чате! Не имеешь право на баны/разбаны! 🤔\nПопытка управления реальностью записана в аналы, группа немедленного БАНения уже выехала за тобой!😉", msg.MessageID)

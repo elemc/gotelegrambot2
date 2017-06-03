@@ -12,11 +12,13 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
+// FilesCacheMemory type is a thread-safe files cache
 type FilesCacheMemory struct {
 	cache map[string]string
 	mutex sync.RWMutex
 }
 
+// Get function get file from cache by name
 func (fc *FilesCacheMemory) Get(name string) (value string) {
 	var ok bool
 	fc.mutex.RLock()
@@ -27,12 +29,14 @@ func (fc *FilesCacheMemory) Get(name string) (value string) {
 	return ""
 }
 
+// Set function store file information in cache
 func (fc *FilesCacheMemory) Set(name, value string) {
 	fc.mutex.Lock()
 	fc.cache[name] = value
 	fc.mutex.Unlock()
 }
 
+// Update function updates files in cache
 func (fc *FilesCacheMemory) Update() {
 	var (
 		files []FileCache

@@ -13,6 +13,7 @@ import (
 	"github.com/go-pg/pg"
 )
 
+// Cache is a type for store flooder information
 type Cache struct {
 	FlooderID int
 	UserID    int
@@ -77,6 +78,7 @@ func cacheSet(flooderID, userID int) (err error) {
 	return
 }
 
+// Remove function for remove cache flooder record from database
 func (c *Cache) Remove() (err error) {
 	if _, err = db.Model(&[]Cache{}).Where("flooder_id = ? AND user_id = ? AND timestamp = ?", c.FlooderID, c.UserID, c.Timestamp).Delete(); err != nil {
 		return
