@@ -17,8 +17,8 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/go-pg/pg"
+	log "github.com/sirupsen/logrus"
 	"gopkg.in/telegram-bot-api.v4"
 )
 
@@ -356,6 +356,25 @@ func isUserAdmin(chat *tgbotapi.Chat, user *tgbotapi.User) bool {
 		}
 	}
 	return false
+}
+
+func sendMessageToAdmins(msg *tgbotapi.Message) {
+	var err error
+	config := tgbotapi.ChatConfig{
+		ChatID: msg.Chat.ID,
+	}
+
+	var admins []tgbotapi.ChatMember
+	if admins, err = bot.GetChatAdministrators(config); err != nil {
+		log.Errorf("Unable to get chat administrators: %s", err)
+		return
+	}
+
+	link := fmt.Sprintf("Новая жалоба на спам: https://t.me/%s/%d", msg.Chat.UserName, msg.ReplyToMessage.MessageID)
+
+	for _, admin := range admins {
+		go sendMessage(int64(admin.User.ID), link, 0)
+	}
 }
 
 func isMeAdmin(chat *tgbotapi.Chat) bool {

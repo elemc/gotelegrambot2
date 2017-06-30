@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/buaazp/fasthttprouter"
+	log "github.com/sirupsen/logrus"
 	"github.com/valyala/fasthttp"
 	"gopkg.in/telegram-bot-api.v4"
 )

@@ -12,7 +12,7 @@ import (
 	"os/exec"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"gopkg.in/telegram-bot-api.v4"
 )
 
@@ -115,12 +115,6 @@ func commandsPingHandler(msg *tgbotapi.Message) {
 }
 
 func commandsFloodHandler(msg *tgbotapi.Message) {
-	if !isMeAdmin(msg.Chat) {
-		sendMessage(msg.Chat.ID, "Бот не является администратором этого чата. Команда недоступна!", msg.MessageID)
-		log.Warn("Command `flood` in chat with bot not admin from %s", msg.From.String())
-		return
-	}
-
 	if msg.ReplyToMessage == nil {
 		sendMessage(msg.Chat.ID, "Напиши команду в ответ на сообщение-флуд, тогда сработает.", msg.MessageID)
 		return
@@ -134,7 +128,7 @@ func commandsFloodHandler(msg *tgbotapi.Message) {
 		return
 	}
 
-	// chech himself
+	// check himself
 	if msg.ReplyToMessage.From.ID == msg.From.ID {
 		sendMessage(msg.Chat.ID, "Самотык? 😜", msg.MessageID)
 		return
@@ -151,6 +145,11 @@ func commandsFloodHandler(msg *tgbotapi.Message) {
 		if err = cacheSet(msg.ReplyToMessage.From.ID, msg.From.ID); err != nil {
 			log.Errorf("Unable to set cache for flooder ID %d and user ID %d: %s", msg.ReplyToMessage.From.ID, msg.From.ID, err)
 		}
+	}
+
+	if !isMeAdmin(msg.Chat) {
+		go sendMessageToAdmins(msg)
+		return
 	}
 
 	var (

@@ -9,7 +9,7 @@ package main
 import (
 	"sync"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // FilesCacheMemory type is a thread-safe files cache

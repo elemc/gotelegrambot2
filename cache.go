@@ -9,8 +9,8 @@ package main
 import (
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/go-pg/pg"
+	log "github.com/sirupsen/logrus"
 )
 
 // Cache is a type for store flooder information
