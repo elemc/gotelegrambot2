@@ -338,6 +338,11 @@ func commandsShowFeeds(msg *tgbotapi.Message) {
 }
 
 func commandsAddInsult(msg *tgbotapi.Message, isWord bool) {
+	if !userIDIsAuthForInsult(msg.From) {
+		sendMessage(msg.Chat.ID, "Тебе этого нельзя!", msg.MessageID)
+		log.Debugf("Command add_insult without authorization %s", msg.From.String())
+		return
+	}
 	if msg.CommandArguments() == "" {
 		sendMessage(msg.Chat.ID, "Задай аргумент(ы) - слово или слова", msg.MessageID)
 		log.Debugf("Command add_insult without arguments from %s", msg.From.String())
@@ -364,6 +369,11 @@ func commandsAddInsult(msg *tgbotapi.Message, isWord bool) {
 }
 
 func commandsDelInsult(msg *tgbotapi.Message, isWord bool) {
+	if !userIDIsAuthForInsult(msg.From) {
+		sendMessage(msg.Chat.ID, "Тебе этого нельзя!", msg.MessageID)
+		log.Debugf("Command del_insult without authorization %s", msg.From.String())
+		return
+	}
 	if msg.CommandArguments() == "" {
 		sendMessage(msg.Chat.ID, "Задай аргумент(ы) - слово или слова", msg.MessageID)
 		log.Debugf("Command del_insult without arguments from %s", msg.From.String())
@@ -410,4 +420,23 @@ func commandsShowInsult(msg *tgbotapi.Message) {
 	if len(words) > 0 {
 		sendMessage(msg.Chat.ID, fmt.Sprintf("*Оскорбления*:\n%s", strings.Join(words, "\n")), 0)
 	}
+}
+
+func userIDIsAuthForInsult(user *tgbotapi.User) (authorized bool) {
+	authInsultUsers := []int{
+		204176584, // xvitaly
+		217969480, // elemc
+		47960317,  // ignatenkobrain
+		103761953, // vrutkovs
+		170389127, // vascom
+	}
+
+	for u := range authInsultUsers {
+		if user.ID == u {
+			authorized = true
+			return
+		}
+	}
+
+	return
 }
