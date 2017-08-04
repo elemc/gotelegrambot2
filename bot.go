@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -436,6 +437,16 @@ func insultMessage(msg *tgbotapi.Message) {
 				log.Debugf("Found %s in message. Skip it randomly.", target)
 				break
 			}
+
+			// break if target word in URL
+			re := regexp.MustCompile(`(http|ftp|https):\/\/([\w\-_]+(?:(?:\.[\w\-_]+)+))([\w\-\.,@?^=%&amp;:/~\+#]*[\w\-\@?^=%&amp;/~\+#])?`)
+			for _, url := range re.FindAllString(msg.Text, -1) {
+				if strings.Contains(strings.ToLower(url), strings.ToLower(target)) {
+					log.Debugf("Target word \"%s\" in URL [%s]", target, url)
+					return
+				}
+			}
+
 			random := r.Int63n(int64(len(words)))
 			sendMessage(msg.Chat.ID, fmt.Sprintf("%s - %s", target, words[random]), msg.MessageID)
 			log.Debugf("Found %s in message. Answer %s - %s.", target, target, words[random])
