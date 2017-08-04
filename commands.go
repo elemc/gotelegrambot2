@@ -431,7 +431,7 @@ func userIDIsAuthForInsult(user *tgbotapi.User) (authorized bool) {
 		170389127, // vascom
 	}
 
-	for u := range authInsultUsers {
+	for _, u := range authInsultUsers {
 		if user.ID == u {
 			authorized = true
 			return
