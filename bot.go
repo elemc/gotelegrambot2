@@ -407,7 +407,7 @@ func sendMessageToAllChats(text string) {
 	}
 
 	for _, chat := range chats {
-		if !chat.IsGroup() && !chat.IsSuperGroup() { // skip channels, private and other chats
+		if !chat.IsGroup() && !chat.IsSuperGroup() && !chat.IsChannel() { // skip channels, private and other chats
 			continue
 		}
 
