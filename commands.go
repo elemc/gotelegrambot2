@@ -258,6 +258,19 @@ func commandsDNFHandler(msg *tgbotapi.Message) {
 		err    error
 		output []byte
 	)
+	subcommands := map[string]struct{}{
+		"info":      {},
+		"provides":  {},
+		"repolist":  {},
+		"repoquery": {},
+		"search":    {},
+	}
+
+	appendQ := map[string]struct{}{
+		"repolist":  {},
+		"repoquery": {},
+	}
+
 	args := strings.Replace(msg.CommandArguments(), "—", "--", -1)
 	if args == "" {
 		sendMessage(msg.Chat.ID, "Не знаю, что выполнять, ты же ничего не указал в аргументах", msg.MessageID)
@@ -266,8 +279,9 @@ func commandsDNFHandler(msg *tgbotapi.Message) {
 	}
 
 	arglist := strings.Split(args, " ")
-	if arglist[0] == "info" || arglist[0] == "provides" || arglist[0] == "repolist" || arglist[0] == "repoquery" {
-		if arglist[0] != "repolist" && arglist[0] != "repoquery" {
+
+	if _, ok := subcommands[arglist[0]]; ok == true {
+		if _, ok := appendQ[arglist[0]]; ok == true {
 			arglist = append(arglist, "-q")
 		}
 		cmd := exec.Command("/usr/bin/dnf", arglist...)
@@ -281,6 +295,10 @@ func commandsDNFHandler(msg *tgbotapi.Message) {
 			sendMessage(msg.Chat.ID, fmt.Sprintf("``` %s ```", output), msg.MessageID)
 			log.Debugf("Run command from %s: dnf %s", msg.From.String(), strings.Join(arglist, " "))
 		}
+	} else {
+		sendMessage(msg.Chat.ID, fmt.Sprintf("Неизвестная подкомманда: %s", arglist[0]), msg.MessageID)
+		log.Debugf("Unknown `dnf` subcommand: %s", msg.From.String())
+		return
 	}
 }
 
