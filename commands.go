@@ -200,7 +200,7 @@ func commandsBanHandler(msg *tgbotapi.Message) {
 	log.Debugf("Commands `ban` or `unban` in group or supergroup chat with bot admin from %s", msg.From.String())
 
 	if !isUserAdmin(msg.Chat, msg.From) {
-		sendMessage(msg.Chat.ID, "Ты не админ в этом чате! Не имеешь право на баны/разбаны! 🤔\nПопытка управления реальностью записана в аналы, группа немедленного БАНения уже выехала за тобой!😉", msg.MessageID)
+                sendMessage(msg.Chat.ID, "Ты не админ в этом чате! Не имеешь право на баны/разбаны! 🤔\nПопытка управления реальностью записана в анналы, группа немедленного БАНения уже выехала за тобой!😉", msg.MessageID)
 		log.Warnf("Commands `ban` or `unban` run fails, user %s not admin in chat!", msg.From.String())
 		return
 	}
