@@ -231,7 +231,7 @@ func commandsInvertHandler(msg *tgbotapi.Message) {
 				}
 			}
 		}
-		answer := fmt.Sprintf("Возможно %s пытался сказать:\n", msg.From.String())
+		answer := fmt.Sprintf("Возможно %s пытался сказать:\n", msg.ReplyToMessage.From.String())
 		answer += strings.Join(translit, " ")
 		sendMessage(msg.Chat.ID, answer, msg.ReplyToMessage.MessageID)
 		return
