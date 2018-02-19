@@ -197,18 +197,45 @@ func commandsInvertHandler(msg *tgbotapi.Message) {
 		log.Errorf("Unable to get bot user: %s", err)
 		return
 	} else if botUser.ID == msg.ReplyToMessage.From.ID {
-		sendMessage(msg.Chat.ID, fmt.Sprintf("Хорошая попытка %s 😜", msg.From.String()), msg.MessageID)
+		sendMessage(msg.Chat.ID, fmt.Sprintf("Хорошая попытка, %s 😜", msg.From.String()), msg.MessageID)
 		return
 	}
 
 	// check himself
 	if msg.ReplyToMessage.From.ID == msg.From.ID {
-		sendMessage(msg.Chat.ID, "Транслитерация", msg.ReplyToMessage.MessageID)    // or msg.ReplyToMessage.MessageID
-		// can use msg.ReplyToMessage.From.String()
-		// for get username
+		translit []string
+		words := strings.Split(msg.Text, " ")
+		for _, word := range words {
+			for _, entity := range msg.MessageEntity {
+				if entity.User.UserName == word {
+					translit := append(translit, word)
+				} else if entity.URL == word {
+					translit := append(translit, word)
+				} else {
+					// transliteration
+					k := "ё1234567890-=йцукенгшщзхъфывапролджэ\ячсмитьбю.Ё!\"№;%:?*()_+ЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭ/ЯЧСМИТЬБЮ,"
+					l := "`1234567890-=qwertyuiop[]asdfghjkl;'\zxcvbnm,./~!@#$%^&*()_+QWERTYUIOP{}ASDFGHJKL:\"|ZXCVBNM<>?"
+					new_word string
+					for _, char := range word {
+						if strings.Contains(k, char) {
+							i := strings.Index(k, char)
+							new_word += l[i]
+						} else if strings.Contains(l, char) {
+							i := strings.Index(l, char)
+							new_word += k[i]
+						} else {
+							new_word += char
+						}
+					}
+					translit := append(translit, new_word)
+				}
+			}
+		}
+		answer := append(fmt.Sprintf("Возможно %s пытался сказать:\n", msg.From.String()), translit)
+		sendMessage(msg.Chat.ID, strings.Join(answer, " "), msg.ReplyToMessage.MessageID)
 		return
 	} else {
-		sendMessage(msg.Chat.ID, fmt.Sprintf("%s, ты можешь транслитерировать только свои сообщения.", msg.ReplyToMessage.From.String()), msg.ReplyToMessage.MessageID)
+		sendMessage(msg.Chat.ID, fmt.Sprintf("%s, ты можешь транслитерировать только свои сообщения.", msg.From.String()), msg.MessageID)
 		return
 	}
 }
