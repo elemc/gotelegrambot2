@@ -163,11 +163,10 @@ func commandsFloodHandler(msg *tgbotapi.Message) {
 		return
 	}
 	if level >= options.MaximumFloodLevel {
-		config := tgbotapi.ChatMemberConfig{
-			ChatID:             msg.Chat.ID,
-			SuperGroupUsername: msg.Chat.UserName,
-			UserID:             msg.ReplyToMessage.From.ID,
-		}
+		config := tgbotapi.KickChatMemberConfig{}
+		config.ChatID = msg.Chat.ID
+		config.SuperGroupUsername = msg.Chat.UserName
+		config.UserID = msg.ReplyToMessage.From.ID
 		if apiResp, err = bot.KickChatMember(config); err != nil {
 			if apiResp.Ok {
 				sendMessage(msg.Chat.ID, fmt.Sprintf("%s терпение туземцев этого чата по поводу твоего флуда кончилось. Мы изгоняем тебя!", msg.ReplyToMessage.From.String()), 0)
@@ -230,15 +229,17 @@ func commandsBanHandler(msg *tgbotapi.Message) {
 	}
 	log.Debugf("Found user [%+v]", *user)
 
-	config := tgbotapi.ChatMemberConfig{
-		ChatID:             msg.Chat.ID,
-		SuperGroupUsername: msg.Chat.UserName,
-		UserID:             user.ID,
-	}
-
 	if strings.ToLower(msg.Command()) == "ban" {
+		config := tgbotapi.KickChatMemberConfig{}
+		config.ChatID = msg.Chat.ID
+		config.SuperGroupUsername = msg.Chat.UserName
+		config.UserID = user.ID
 		apiResp, err = bot.KickChatMember(config)
 	} else if strings.ToLower(msg.Command()) == "unban" {
+		config := tgbotapi.ChatMemberConfig{}
+		config.ChatID = msg.Chat.ID
+		config.SuperGroupUsername = msg.Chat.UserName
+		config.UserID = user.ID
 		apiResp, err = bot.UnbanChatMember(config)
 	}
 
