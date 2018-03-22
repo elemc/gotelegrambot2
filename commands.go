@@ -29,6 +29,8 @@ func commandsMainHandler(msg *tgbotapi.Message) {
 		go commandsDNFHandler(msg)
 	case "flood":
 		go commandsFloodHandler(msg)
+	case "invert":
+		go commandsInvertHandler(msg)
 	case "ping":
 		go commandsPingHandler(msg)
 	case "help":
@@ -76,6 +78,7 @@ func commandsHelpHandler(msg *tgbotapi.Message) {
 /pid - в ответ на сообщение возвращает его ID
 /link - в ответ на сообщение возвращает ссылку, если чат публичный
 /flood - в ответ на сообщение меняет уровень флудера для пользователя
+/invert - в ответ на сообщение транслитерирует исходное сообщение в новом
 `
 	sendMessage(msg.Chat.ID, helpMsg, 0)
 }
@@ -183,6 +186,60 @@ func commandsFloodHandler(msg *tgbotapi.Message) {
 	}
 }
 
+func commandsInvertHandler(msg *tgbotapi.Message) {
+	if msg.ReplyToMessage == nil {
+		sendMessage(msg.Chat.ID, "Напиши команду в ответ на сообщение, тогда сработает.", msg.MessageID)
+		return
+	}
+
+	if botUser, err := bot.GetMe(); err != nil {
+		log.Errorf("Unable to get bot user: %s", err)
+		return
+	} else if botUser.ID == msg.ReplyToMessage.From.ID {
+		sendMessage(msg.Chat.ID, fmt.Sprintf("Хорошая попытка, %s 😜", msg.From.String()), msg.MessageID)
+		return
+	}
+
+	// check himself
+	if msg.ReplyToMessage.From.ID == msg.From.ID {
+		translit []string
+		words := strings.Split(msg.Text, " ")
+		for _, word := range words {
+			for _, entity := range msg.MessageEntity {
+				if entity.User.UserName == word {
+					translit := append(translit, word)
+				} else if entity.URL == word {
+					translit := append(translit, word)
+				} else {
+					// transliteration
+					k := "ё1234567890-=йцукенгшщзхъфывапролджэ\ячсмитьбю.Ё!\"№;%:?*()_+ЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭ/ЯЧСМИТЬБЮ,"
+					l := "`1234567890-=qwertyuiop[]asdfghjkl;'\zxcvbnm,./~!@#$%^&*()_+QWERTYUIOP{}ASDFGHJKL:\"|ZXCVBNM<>?"
+					new_word string
+					for _, char := range word {
+						if strings.Contains(k, char) {
+							i := strings.Index(k, char)
+							new_word += l[i]
+						} else if strings.Contains(l, char) {
+							i := strings.Index(l, char)
+							new_word += k[i]
+						} else {
+							new_word += char
+						}
+					}
+					translit := append(translit, new_word)
+				}
+			}
+		}
+		answer := fmt.Sprintf("Возможно %s пытался сказать:\n", msg.ReplyToMessage.From.String())
+		answer += strings.Join(translit, " ")
+		sendMessage(msg.Chat.ID, answer, msg.ReplyToMessage.MessageID)
+		return
+	} else {
+		sendMessage(msg.Chat.ID, fmt.Sprintf("%s, ты можешь транслитерировать только свои сообщения.", msg.From.String()), msg.MessageID)
+		return
+	}
+}
+
 func commandsBanHandler(msg *tgbotapi.Message) {
 	if !msg.Chat.IsGroup() && !msg.Chat.IsSuperGroup() {
 		sendMessage(msg.Chat.ID, "Кого будем банить в привате? 😂", msg.MessageID)
@@ -199,7 +256,7 @@ func commandsBanHandler(msg *tgbotapi.Message) {
 	log.Debugf("Commands `ban` or `unban` in group or supergroup chat with bot admin from %s", msg.From.String())
 
 	if !isUserAdmin(msg.Chat, msg.From) {
-		sendMessage(msg.Chat.ID, "Ты не админ в этом чате! Не имеешь право на баны/разбаны! 🤔\nПопытка управления реальностью записана в аналы, группа немедленного БАНения уже выехала за тобой!😉", msg.MessageID)
+		sendMessage(msg.Chat.ID, "Ты не админ в этом чате! Не имеешь право на баны/разбаны! 🤔\nПопытка управления реальностью записана в анналы, группа немедленного БАНения уже выехала за тобой!😉", msg.MessageID)
 		log.Warnf("Commands `ban` or `unban` run fails, user %s not admin in chat!", msg.From.String())
 		return
 	}
