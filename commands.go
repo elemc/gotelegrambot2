@@ -11,6 +11,7 @@ import (
 	"math/rand"
 	"os/exec"
 	"strings"
+	"bytes"
 
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/telegram-bot-api.v4"
@@ -203,41 +204,46 @@ func commandsInvertHandler(msg *tgbotapi.Message) {
 
 	// check himself
 	if msg.ReplyToMessage.From.ID == msg.From.ID {
-		translit []string
+		var translit []string
+		var answer []string
+		k := "ё1234567890-=йцукенгшщзхъфывапролджэ\\ячсмитьбю.Ё!\"№;%:?*()_+ЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭ/ЯЧСМИТЬБЮ,"
+		l := "`1234567890-=qwertyuiop[]asdfghjkl;'\\zxcvbnm,./~!@#$%^&*()_+QWERTYUIOP{}ASDFGHJKL:\"|ZXCVBNM<>?"
 		words := strings.Split(msg.Text, " ")
+		entities := msg.Entities
 		for _, word := range words {
-			for _, entity := range msg.MessageEntity {
-				if entity.User.UserName == word {
-					translit := append(translit, word)
-				} else if entity.URL == word {
-					translit := append(translit, word)
-				} else {
-					// transliteration
-					k := "ё1234567890-=йцукенгшщзхъфывапролджэ\ячсмитьбю.Ё!\"№;%:?*()_+ЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭ/ЯЧСМИТЬБЮ,"
-					l := "`1234567890-=qwertyuiop[]asdfghjkl;'\zxcvbnm,./~!@#$%^&*()_+QWERTYUIOP{}ASDFGHJKL:\"|ZXCVBNM<>?"
-					new_word string
-					for _, char := range word {
-						if strings.Contains(k, char) {
-							i := strings.Index(k, char)
-							new_word += l[i]
-						} else if strings.Contains(l, char) {
-							i := strings.Index(l, char)
-							new_word += k[i]
-						} else {
-							new_word += char
+			if entities != nil {
+				for _, entity := range (*entities) {
+					if entity.User.UserName == word {
+						append(translit, word)
+					} else if entity.URL == word {
+						append(translit, word)
+					} else {
+						// transliteration
+						var new_word []byte
+						for _, char := range word {
+							if bytes.ContainsRune([]byte(k), char) {
+								i := bytes.IndexRune([]byte(k), char)
+								append(new_word, l[i])
+							} else if bytes.ContainsRune([]byte(l), char) {
+								i := bytes.IndexRune([]byte(l), char)
+								append(new_word, k[i])
+							} else {
+								append(new_word, byte(char))
+							}
 						}
+						buf := bytes.NewBuffer(new_word)
+						append(translit, buf.String())
 					}
-					translit := append(translit, new_word)
 				}
+			} else {
+				append(translit, word)
 			}
 		}
-		answer := fmt.Sprintf("Возможно %s пытался сказать:\n", msg.ReplyToMessage.From.String())
-		answer += strings.Join(translit, " ")
+		append(answer, fmt.Sprintf("Возможно %s пытался сказать:\n", msg.ReplyToMessage.From.String()))
+		append(answer, strings.Join(translit, " "))
 		sendMessage(msg.Chat.ID, answer, msg.ReplyToMessage.MessageID)
-		return
 	} else {
 		sendMessage(msg.Chat.ID, fmt.Sprintf("%s, ты можешь транслитерировать только свои сообщения.", msg.From.String()), msg.MessageID)
-		return
 	}
 }
 
